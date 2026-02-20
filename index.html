@@ -1,0 +1,1597 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Splitify</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=Syne:wght@600;700;800&display=swap');
+
+  :root {
+    --bg: #0d0d0d;
+    --bg2: #141414;
+    --bg3: #1e1e1e;
+    --bg4: #252525;
+    --border: #2e2e2e;
+    --border2: #3a3a3a;
+    --accent: #b8f2a0;
+    --accent2: #78e860;
+    --accent-dim: rgba(184,242,160,0.12);
+    --accent-dim2: rgba(184,242,160,0.06);
+    --red: #ff5c5c;
+    --red-dim: rgba(255,92,92,0.12);
+    --yellow: #f0c040;
+    --yellow-dim: rgba(240,192,64,0.12);
+    --text: #f4f4f4;
+    --text2: #c0c0c0;
+    --text3: #787878;
+    --mono: 'IBM Plex Mono', monospace;
+    --sans: 'Syne', sans-serif;
+    --radius: 6px;
+    --transition: 0.15s ease;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    width: 100%; height: 100%;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 14px;
+    line-height: 1.55;
+    overflow: hidden;
+    user-select: none;
+  }
+
+  /* ── Scrollbar ── */
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+
+  /* ── Layout ── */
+  #app {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+  }
+
+  /* ── Title Bar ── */
+  #titlebar {
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
+    height: 44px;
+    background: var(--bg);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+    -webkit-app-region: drag;
+    gap: 10px;
+  }
+
+  #titlebar .logo {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    -webkit-app-region: no-drag;
+  }
+
+  #titlebar .logo-icon {
+    width: 22px; height: 22px;
+    background: var(--accent);
+    border-radius: 4px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+
+  #titlebar .logo-icon svg { width: 13px; height: 13px; }
+
+  #titlebar .logo-name {
+    font-family: var(--sans);
+    font-weight: 800;
+    font-size: 15px;
+    letter-spacing: -0.3px;
+    color: var(--text);
+  }
+
+  #titlebar .logo-version {
+    font-size: 9px;
+    color: var(--text3);
+    letter-spacing: 0.5px;
+    margin-top: 1px;
+  }
+
+  /* ── Tabs ── */
+  #tabs {
+    display: flex;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg);
+    padding: 0 16px;
+    gap: 0;
+    flex-shrink: 0;
+    -webkit-app-region: no-drag;
+  }
+
+  .tab {
+    padding: 9px 14px;
+    font-size: 10px;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    color: var(--text3);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+    transition: color var(--transition);
+    font-family: var(--mono);
+    font-weight: 700;
+    white-space: nowrap;
+  }
+
+  .tab:hover { color: var(--text2); }
+  .tab.active {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+  }
+
+  /* ── Tab Content ── */
+  .tab-panel {
+    display: none;
+    flex: 1;
+    overflow: hidden;
+    flex-direction: column;
+  }
+  .tab-panel.active { display: flex; }
+
+  /* ══════════════════════════════════════
+     PROFILES TAB
+  ══════════════════════════════════════ */
+  #profiles-panel {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .panel-toolbar {
+    display: flex;
+    align-items: center;
+    padding: 10px 16px;
+    gap: 8px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+
+  .panel-toolbar span {
+    flex: 1;
+    font-size: 10px;
+    color: var(--text3);
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+  }
+
+  /* ── Buttons ── */
+  .btn {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 5px 10px;
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    cursor: pointer;
+    border-radius: var(--radius);
+    border: 1px solid var(--border2);
+    background: var(--bg3);
+    color: var(--text2);
+    transition: all var(--transition);
+    white-space: nowrap;
+    text-transform: uppercase;
+  }
+  .btn:hover { background: var(--bg4); color: var(--text); border-color: var(--border2); }
+  .btn:active { transform: scale(0.97); }
+
+  .btn-accent {
+    background: var(--accent-dim);
+    color: var(--accent);
+    border-color: rgba(184,242,160,0.25);
+  }
+  .btn-accent:hover {
+    background: rgba(184,242,160,0.2);
+    color: var(--accent2);
+    border-color: var(--accent);
+  }
+
+  .btn-danger {
+    background: var(--red-dim);
+    color: var(--red);
+    border-color: rgba(255,92,92,0.2);
+  }
+  .btn-danger:hover { background: rgba(255,92,92,0.2); }
+
+  .btn-ghost {
+    background: transparent;
+    border-color: transparent;
+    color: var(--text3);
+    padding: 5px 6px;
+  }
+  .btn-ghost:hover { background: var(--bg3); color: var(--text2); border-color: var(--border); }
+
+  .btn-large {
+    padding: 10px 20px;
+    font-size: 11px;
+    letter-spacing: 1px;
+    border-radius: var(--radius);
+  }
+
+  /* ── Profile List ── */
+  #profile-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .profile-item {
+    display: flex;
+    align-items: center;
+    padding: 10px 12px;
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    background: var(--bg2);
+    cursor: pointer;
+    transition: all var(--transition);
+    gap: 10px;
+  }
+
+  .profile-item:hover { background: var(--bg3); border-color: var(--border2); }
+  .profile-item.selected { border-color: var(--accent); background: var(--accent-dim2); }
+
+  .profile-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--accent);
+    flex-shrink: 0;
+  }
+
+  .profile-info { flex: 1; min-width: 0; }
+
+  .profile-name {
+    font-family: var(--sans);
+    font-weight: 700;
+    font-size: 13px;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .profile-meta {
+    font-size: 10px;
+    color: var(--text3);
+    margin-top: 2px;
+  }
+
+  .profile-actions {
+    display: flex;
+    gap: 3px;
+    opacity: 0;
+    transition: opacity var(--transition);
+  }
+  .profile-item:hover .profile-actions { opacity: 1; }
+
+  /* ── Profile Editor Modal ── */
+  #editor-modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.75);
+    z-index: 200;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  #editor-modal-overlay.open { display: flex; }
+
+  #editor-modal {
+    background: var(--bg2);
+    border: 1px solid var(--border2);
+    border-radius: 10px;
+    width: 100%;
+    max-width: 500px;
+    max-height: calc(100vh - 60px);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    box-shadow: 0 24px 60px rgba(0,0,0,0.6);
+  }
+
+  #editor-modal .em-header {
+    display: flex;
+    align-items: center;
+    padding: 16px 18px 14px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+    gap: 10px;
+  }
+
+  #editor-modal .em-title {
+    font-family: var(--sans);
+    font-weight: 800;
+    font-size: 16px;
+    flex: 1;
+    color: var(--text);
+  }
+
+  #editor-modal .em-body {
+    padding: 16px 18px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    flex: 1;
+  }
+
+  #editor-modal .em-footer {
+    padding: 12px 18px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+
+  /* ── Inputs ── */
+  .field-label {
+    font-size: 9px;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    color: var(--text3);
+    margin-bottom: 5px;
+  }
+
+  .input {
+    width: 100%;
+    padding: 7px 10px;
+    font-family: var(--mono);
+    font-size: 11px;
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text);
+    outline: none;
+    transition: border-color var(--transition);
+  }
+  .input:focus { border-color: var(--accent); }
+  .input::placeholder { color: var(--text3); }
+
+  .input-row {
+    display: flex;
+    gap: 6px;
+  }
+
+  /* ── Parameters Table ── */
+  .params-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 6px;
+    gap: 8px;
+  }
+
+  .params-header-label {
+    font-size: 9px;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    color: var(--text3);
+    flex: 1;
+  }
+
+  #param-list {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    max-height: 200px;
+    overflow-y: auto;
+    padding-right: 2px;
+  }
+
+  .param-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 8px;
+    background: var(--bg2);
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+  }
+
+  .param-value {
+    flex: 1;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text);
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .param-label {
+    font-size: 10px;
+    color: var(--text3);
+    min-width: 40px;
+    text-align: right;
+  }
+
+  .param-payable {
+    font-size: 9px;
+    letter-spacing: 0.3px;
+    padding: 2px 6px;
+    border-radius: 3px;
+    cursor: pointer;
+    font-weight: 700;
+    flex-shrink: 0;
+    transition: all var(--transition);
+  }
+
+  .param-payable.yes { background: rgba(120,232,96,0.15); color: var(--accent2); border: 1px solid rgba(120,232,96,0.25); }
+  .param-payable.no  { background: rgba(255,92,92,0.1); color: #ff7a7a; border: 1px solid rgba(255,92,92,0.2); }
+  .param-payable:hover { filter: brightness(1.2); }
+
+  .param-del {
+    background: none; border: none;
+    color: var(--text3);
+    cursor: pointer;
+    font-size: 13px;
+    line-height: 1;
+    padding: 0 2px;
+    transition: color var(--transition);
+    flex-shrink: 0;
+  }
+  .param-del:hover { color: var(--red); }
+
+  .add-param-row {
+    display: flex;
+    gap: 5px;
+    margin-top: 4px;
+  }
+
+  .add-param-row .input { flex: 1; padding: 6px 8px; font-size: 10px; }
+
+  /* ══════════════════════════════════════
+     SPLIT TAB
+  ══════════════════════════════════════ */
+  #split-panel {
+    flex: 1;
+    overflow-y: auto;
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  /* ── Drop Zone ── */
+  #drop-zone {
+    border: 1.5px dashed var(--border2);
+    border-radius: 8px;
+    padding: 20px 16px;
+    text-align: center;
+    cursor: pointer;
+    transition: all var(--transition);
+    background: var(--bg2);
+    position: relative;
+  }
+
+  #drop-zone:hover, #drop-zone.drag-over {
+    border-color: var(--accent);
+    background: var(--accent-dim2);
+  }
+
+  #drop-zone .drop-icon {
+    font-size: 22px;
+    margin-bottom: 8px;
+    opacity: 0.6;
+  }
+
+  #drop-zone .drop-text {
+    font-family: var(--sans);
+    font-weight: 700;
+    font-size: 13px;
+    color: var(--text);
+    margin-bottom: 4px;
+  }
+
+  #drop-zone .drop-sub {
+    font-size: 10px;
+    color: var(--text3);
+  }
+
+  #drop-zone.has-file {
+    border-style: solid;
+    border-color: var(--accent);
+    background: var(--accent-dim2);
+  }
+
+  #drop-zone.has-file .drop-text { color: var(--accent); }
+
+  /* ── Section ── */
+  .section { display: flex; flex-direction: column; gap: 6px; }
+
+  .section-title {
+    font-size: 9px;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    color: var(--text3);
+    display: flex; align-items: center; gap: 6px;
+  }
+
+  .section-title::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  /* ── Select ── */
+  .select-wrap { position: relative; }
+
+  .select {
+    width: 100%;
+    padding: 7px 28px 7px 10px;
+    font-family: var(--mono);
+    font-size: 11px;
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text);
+    outline: none;
+    appearance: none;
+    cursor: pointer;
+    transition: border-color var(--transition);
+  }
+  .select:focus { border-color: var(--accent); }
+
+  .select-wrap::after {
+    content: '▾';
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text3);
+    pointer-events: none;
+    font-size: 10px;
+  }
+
+  /* ── Column Samples ── */
+  #column-samples {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    padding: 6px 0 2px;
+  }
+
+  .sample-pill {
+    padding: 2px 7px;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    font-size: 10px;
+    color: var(--text2);
+  }
+
+  /* ── Output row ── */
+  .output-row {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+  }
+
+  .output-path {
+    flex: 1;
+    padding: 7px 10px;
+    font-family: var(--mono);
+    font-size: 10px;
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text2);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* ── Options row ── */
+  .options-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    font-size: 11px;
+    color: var(--text2);
+  }
+
+  .checkbox-label input[type=checkbox] {
+    accent-color: var(--accent2);
+    width: 13px; height: 13px;
+    cursor: pointer;
+  }
+
+  /* ── Split Button ── */
+  #split-btn {
+    width: 100%;
+    padding: 12px;
+    font-size: 12px;
+    letter-spacing: 1.5px;
+    background: var(--accent-dim);
+    color: var(--accent);
+    border: 1.5px solid rgba(184,242,160,0.3);
+    border-radius: var(--radius);
+    font-family: var(--mono);
+    font-weight: 700;
+    cursor: pointer;
+    transition: all var(--transition);
+    text-transform: uppercase;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+
+  #split-btn:hover:not(:disabled) {
+    background: rgba(184,242,160,0.2);
+    border-color: var(--accent);
+  }
+
+  #split-btn:active:not(:disabled) { transform: scale(0.99); }
+
+  #split-btn:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+  }
+
+  /* ── Log ── */
+  #log-area {
+    display: none;
+    flex-direction: column;
+    gap: 3px;
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 10px;
+    max-height: 160px;
+    overflow-y: auto;
+  }
+
+  #log-area.visible { display: flex; }
+
+  .log-line {
+    font-size: 10px;
+    line-height: 1.5;
+    display: flex;
+    gap: 8px;
+  }
+
+  .log-line .log-time { color: var(--text3); flex-shrink: 0; }
+  .log-line .log-msg { color: var(--text2); }
+  .log-line.log-ok .log-msg { color: var(--accent2); }
+  .log-line.log-err .log-msg { color: var(--red); }
+  .log-line.log-warn .log-msg { color: var(--yellow); }
+  .log-line.log-head { color: var(--text); font-weight: 700; }
+
+  .log-result-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 12px;
+    background: var(--accent-dim2);
+    border: 1px solid rgba(184,242,160,0.15);
+    border-radius: var(--radius);
+    margin-top: 2px;
+  }
+
+  .log-result-bar span { font-size: 11px; color: var(--accent); font-weight: 700; }
+
+  /* ── Empty state ── */
+  .empty-state {
+    text-align: center;
+    padding: 30px 16px;
+    color: var(--text3);
+  }
+  .empty-state .es-icon { font-size: 28px; margin-bottom: 10px; opacity: 0.4; }
+  .empty-state .es-text { font-size: 11px; line-height: 1.6; }
+
+  /* ── Modal ── */
+  #modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.7);
+    z-index: 100;
+    align-items: center;
+    justify-content: center;
+  }
+  #modal-overlay.open { display: flex; }
+
+  #modal {
+    background: var(--bg2);
+    border: 1px solid var(--border2);
+    border-radius: 10px;
+    width: 340px;
+    max-height: 80vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .modal-header {
+    padding: 14px 16px 12px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .modal-header .modal-title {
+    font-family: var(--sans);
+    font-weight: 700;
+    font-size: 14px;
+    flex: 1;
+  }
+  .modal-body { padding: 16px; overflow-y: auto; display: flex; flex-direction: column; gap: 14px; flex: 1; }
+  .modal-footer { padding: 12px 16px; border-top: 1px solid var(--border); display: flex; gap: 6px; justify-content: flex-end; }
+
+  /* ── Spinner ── */
+  .spinner {
+    width: 12px; height: 12px;
+    border: 2px solid rgba(184,242,160,0.2);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    flex-shrink: 0;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── Badge ── */
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 1px 6px;
+    border-radius: 3px;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+  }
+  .badge-green { background: rgba(120,232,96,0.15); color: var(--accent2); }
+  .badge-red { background: var(--red-dim); color: #ff7a7a; }
+  .badge-gray { background: var(--bg3); color: var(--text3); border: 1px solid var(--border); }
+
+  /* ── Tag summary ── */
+  .tag-summary {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    padding: 6px 0;
+  }
+  .tag {
+    padding: 2px 7px;
+    border-radius: 3px;
+    font-size: 10px;
+    font-family: var(--mono);
+  }
+
+  /* ── Divider ── */
+  .divider { height: 1px; background: var(--border); margin: 2px 0; }
+  /* ── Update Banner ── */
+  #update-banner {
+    display: none;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 16px;
+    background: rgba(184,242,160,0.08);
+    border-bottom: 1px solid rgba(184,242,160,0.2);
+    flex-shrink: 0;
+    animation: slideDown 0.25s ease;
+  }
+  @keyframes slideDown {
+    from { opacity: 0; transform: translateY(-8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  #update-banner.visible { display: flex; }
+  #update-banner .ub-icon { font-size: 14px; flex-shrink: 0; }
+  #update-banner .ub-text { flex: 1; font-size: 12px; color: var(--accent); font-weight: 500; }
+  #update-banner .ub-sub  { font-size: 11px; color: var(--text3); margin-top: 1px; }
+  #update-banner .ub-progress {
+    height: 3px; background: var(--border); border-radius: 2px;
+    margin-top: 4px; overflow: hidden;
+  }
+  #update-banner .ub-progress-bar {
+    height: 100%; background: var(--accent2); border-radius: 2px;
+    transition: width 0.3s ease; width: 0%;
+  }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- Title Bar -->
+  <div id="titlebar">
+    <div class="logo">
+      <div class="logo-icon">
+        <svg viewBox="0 0 13 13" fill="none">
+          <rect x="0.5" y="0.5" width="5" height="5" rx="1" fill="#0d0d0d"/>
+          <rect x="7.5" y="0.5" width="5" height="5" rx="1" fill="#0d0d0d"/>
+          <rect x="0.5" y="7.5" width="5" height="5" rx="1" fill="#0d0d0d"/>
+          <rect x="7.5" y="7.5" width="5" height="5" rx="1" fill="#0d0d0d" opacity="0.4"/>
+          <path d="M9.5 9.5L12 12M9.5 12L12 9.5" stroke="#0d0d0d" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <div>
+        <div class="logo-name">Splitify</div>
+        <div class="logo-version">v1.0.0</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <div id="tabs">
+    <div class="tab active" data-tab="split">⚡ Split File</div>
+    <div class="tab" data-tab="profiles">◈ Profiles</div>
+  </div>
+
+  <!-- Update Banner -->
+  <div id="update-banner">
+    <div class="ub-icon">↑</div>
+    <div style="flex:1;min-width:0">
+      <div class="ub-text" id="ub-text">Update available</div>
+      <div id="ub-progress-wrap" style="display:none">
+        <div class="ub-progress"><div class="ub-progress-bar" id="ub-bar"></div></div>
+      </div>
+    </div>
+    <button class="btn btn-accent" id="ub-btn" style="font-size:11px;padding:4px 10px;display:none">Restart & Install</button>
+  </div>
+
+  <!-- Split Tab -->
+  <div id="tab-split" class="tab-panel active">
+    <div id="split-panel">
+
+      <!-- File Drop Zone -->
+      <div id="drop-zone">
+        <div class="drop-icon">📂</div>
+        <div class="drop-text" id="drop-text">Drop Excel file here</div>
+        <div class="drop-sub" id="drop-sub">or click to browse · .xlsx .xls .csv</div>
+      </div>
+      <input type="file" id="file-input" accept=".xlsx,.xls,.csv" style="display:none">
+
+      <!-- Column Selection -->
+      <div class="section" id="section-column" style="display:none">
+        <div class="section-title">Split Column</div>
+        <div class="select-wrap">
+          <select class="select" id="column-select">
+            <option value="">— select column —</option>
+          </select>
+        </div>
+        <div id="column-samples"></div>
+      </div>
+
+      <!-- Profile Selection -->
+      <div class="section" id="section-profile" style="display:none">
+        <div class="section-title">Profile</div>
+        <div class="select-wrap">
+          <select class="select" id="profile-select">
+            <option value="">— no profile (keep all rows) —</option>
+          </select>
+        </div>
+        <div id="profile-preview"></div>
+      </div>
+
+      <!-- Output Folder -->
+      <div class="section" id="section-output" style="display:none">
+        <div class="section-title">Output Folder</div>
+        <div class="output-row">
+          <div class="output-path" id="output-path-display">Same folder as input file</div>
+          <button class="btn" id="browse-output-btn">Browse</button>
+        </div>
+        <div class="options-row">
+          <label class="checkbox-label">
+            <input type="checkbox" id="keep-nonmatching">
+            Export non-matching rows to separate file
+          </label>
+        </div>
+        <div class="options-row">
+          <label class="checkbox-label">
+            <input type="checkbox" id="custom-prefix-toggle">
+            Custom filename prefix
+          </label>
+          <input class="input" id="custom-prefix" placeholder="leave blank to use original filename"
+            style="display:none;flex:1;font-size:10px;padding:5px 8px;">
+        </div>
+      </div>
+
+      <!-- Split Button -->
+      <div id="section-split" style="display:none">
+        <button id="split-btn" disabled>
+          <span id="split-btn-icon">▶</span>
+          <span id="split-btn-text">SPLIT FILE</span>
+        </button>
+      </div>
+
+      <!-- Log -->
+      <div id="log-area"></div>
+
+    </div>
+  </div>
+
+  <!-- Profiles Tab -->
+  <div id="tab-profiles" class="tab-panel">
+    <div id="profiles-panel">
+      <div class="panel-toolbar">
+        <span>Manage Profiles</span>
+        <button class="btn btn-accent" id="new-profile-btn">+ New Profile</button>
+      </div>
+
+      <div id="profile-list">
+        <!-- populated by JS -->
+      </div>
+
+    </div>
+  </div>
+
+<!-- Profile Editor Modal -->
+<div id="editor-modal-overlay">
+  <div id="editor-modal">
+    <div class="em-header">
+      <span class="em-title" id="editor-title">Edit Profile</span>
+      <button class="btn btn-ghost" id="editor-close-btn" style="padding:4px 8px;font-size:14px">✕</button>
+    </div>
+    <div class="em-body">
+      <div>
+        <div class="field-label">Profile Name</div>
+        <input class="input" id="editor-name" placeholder="e.g. SElectric" maxlength="40">
+      </div>
+      <div>
+        <div class="field-label">Description (optional)</div>
+        <input class="input" id="editor-desc" placeholder="Short description..." maxlength="80">
+      </div>
+      <div>
+        <div class="params-header">
+          <span class="params-header-label">Parameters <span id="param-count" style="color:var(--text3)"></span></span>
+          <button class="btn btn-ghost" id="import-btn" title="Bulk import" style="font-size:10px;padding:3px 8px">↑ Import</button>
+        </div>
+        <div id="param-list"></div>
+        <div class="add-param-row" style="margin-top:10px">
+          <input class="input" id="new-param-value" placeholder="Value  (e.g. 01, 30, SOLAR)" style="flex:1">
+          <input class="input" id="new-param-label" placeholder="Label" style="width:90px">
+          <select class="select" id="new-param-payable" style="width:110px">
+            <option value="1">Included</option>
+            <option value="0">Exclude</option>
+          </select>
+          <button class="btn btn-accent" id="add-param-btn">✓ Add</button>
+        </div>
+      </div>
+    </div>
+    <div class="em-footer">
+      <button class="btn btn-accent" id="editor-save-btn" style="flex:1;padding:10px">✓ Save Profile</button>
+      <button class="btn btn-danger" id="editor-delete-btn" style="display:none;padding:10px 16px">Delete</button>
+    </div>
+  </div>
+</div>
+
+</div>
+
+<!-- Import Modal -->
+<div id="modal-overlay">
+  <div id="modal">
+    <div class="modal-header">
+      <span class="modal-title">Import Parameters</span>
+      <button class="btn btn-ghost" id="modal-close">✕</button>
+    </div>
+    <div class="modal-body">
+      <div style="font-size:11px;color:var(--text2);line-height:1.6">
+        Paste values, one per line. Optionally add a tab or comma then a label.<br>
+        Prefix with <code style="color:var(--accent)">!</code> to mark as <em>excluded</em>.<br><br>
+        <span style="color:var(--text3)">Examples:<br>01<br>30, NAM<br>!131<br>!150, CN</span>
+      </div>
+      <div>
+        <div class="field-label">Paste Values</div>
+        <textarea class="input" id="import-textarea" rows="8"
+          style="resize:vertical;font-size:10px;line-height:1.5;font-family:var(--mono)"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" id="modal-cancel">Cancel</button>
+      <button class="btn btn-accent" id="modal-import">Import</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ────────────────────────────────────────────
+//  State
+// ────────────────────────────────────────────
+let profiles = [];
+let editingProfileId = null;
+let editingParams = [];
+let selectedFile = null;
+let fileInfo = null;
+let outputDir = null;
+
+// ────────────────────────────────────────────
+//  Init
+// ────────────────────────────────────────────
+async function init() {
+  profiles = await window.splitify.getProfiles();
+  renderProfileList();
+  populateProfileSelect();
+}
+
+init();
+
+// ────────────────────────────────────────────
+//  Tabs
+// ────────────────────────────────────────────
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    const target = tab.dataset.tab;
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById('tab-' + target).classList.add('active');
+  });
+});
+
+// ────────────────────────────────────────────
+//  Profiles Tab
+// ────────────────────────────────────────────
+function renderProfileList() {
+  const list = document.getElementById('profile-list');
+  if (!profiles.length) {
+    list.innerHTML = `<div class="empty-state">
+      <div class="es-icon">◈</div>
+      <div class="es-text">No profiles yet.<br>Create one to get started.</div>
+    </div>`;
+    return;
+  }
+  list.innerHTML = profiles.map(p => {
+    const payable = p.parameters.filter(x => x.payable).length;
+    const excluded = p.parameters.filter(x => !x.payable).length;
+    const isEditing = editingProfileId === p.id;
+    return `<div class="profile-item ${isEditing ? 'selected' : ''}" data-id="${p.id}">
+      <div class="profile-dot"></div>
+      <div class="profile-info">
+        <div class="profile-name">${escHtml(p.name)}</div>
+        <div class="profile-meta">${payable} included · ${excluded} excluded · ${p.parameters.length} total</div>
+      </div>
+      <div class="profile-actions">
+        <button class="btn btn-ghost" style="font-size:10px;padding:3px 7px" onclick="editProfile('${p.id}')">Edit</button>
+        <button class="btn btn-danger" style="font-size:10px;padding:3px 7px" onclick="confirmDeleteProfile('${p.id}',event)">Del</button>
+      </div>
+    </div>`;
+  }).join('');
+
+  list.querySelectorAll('.profile-item').forEach(el => {
+    el.addEventListener('click', (e) => {
+      if (e.target.closest('.profile-actions')) return;
+      editProfile(el.dataset.id);
+    });
+  });
+}
+
+function editProfile(id) {
+  const profile = profiles.find(p => p.id === id);
+  if (!profile) return;
+
+  editingProfileId = id;
+  editingParams = JSON.parse(JSON.stringify(profile.parameters));
+
+  document.getElementById('editor-title').textContent = 'Edit Profile';
+  document.getElementById('editor-name').value = profile.name;
+  document.getElementById('editor-desc').value = profile.description || '';
+  document.getElementById('editor-delete-btn').style.display = '';
+
+  renderParamList();
+  openEditor();
+  renderProfileList();
+}
+
+function newProfile() {
+  editingProfileId = null;
+  editingParams = [];
+
+  document.getElementById('editor-title').textContent = 'New Profile';
+  document.getElementById('editor-name').value = '';
+  document.getElementById('editor-desc').value = '';
+  document.getElementById('editor-delete-btn').style.display = 'none';
+
+  renderParamList();
+  openEditor();
+}
+
+function openEditor() {
+  document.getElementById('editor-modal-overlay').classList.add('open');
+  setTimeout(() => document.getElementById('editor-name').focus(), 60);
+}
+
+function closeEditor() {
+  document.getElementById('editor-modal-overlay').classList.remove('open');
+  editingProfileId = null;
+  renderProfileList();
+}
+
+function renderParamList() {
+  const list = document.getElementById('param-list');
+  document.getElementById('param-count').textContent = editingParams.length ? `(${editingParams.length})` : '';
+
+  if (!editingParams.length) {
+    list.innerHTML = `<div style="padding:8px;font-size:10px;color:var(--text3);text-align:center">No parameters yet</div>`;
+    return;
+  }
+
+  list.innerHTML = editingParams.map((p, i) => {
+    return `<div class="param-row">
+      <div class="param-value">${escHtml(p.value)}</div>
+      <div class="param-label">${escHtml(p.label || '')}</div>
+      <div class="param-payable ${p.payable ? 'yes' : 'no'}" data-idx="${i}" title="Click to toggle">
+        ${p.payable ? 'INCLUDED' : 'EXCLUDE'}
+      </div>
+      <button class="param-del" data-idx="${i}" title="Remove">×</button>
+    </div>`;
+  }).join('');
+
+  list.querySelectorAll('.param-payable').forEach(el => {
+    el.addEventListener('click', () => {
+      const i = parseInt(el.dataset.idx);
+      editingParams[i].payable = !editingParams[i].payable;
+      renderParamList();
+    });
+  });
+
+  list.querySelectorAll('.param-del').forEach(el => {
+    el.addEventListener('click', () => {
+      const i = parseInt(el.dataset.idx);
+      editingParams.splice(i, 1);
+      renderParamList();
+    });
+  });
+}
+
+document.getElementById('add-param-btn').addEventListener('click', addParam);
+document.getElementById('new-param-value').addEventListener('keydown', e => {
+  if (e.key === 'Enter') addParam();
+});
+
+function addParam() {
+  const valInput = document.getElementById('new-param-value');
+  const labelInput = document.getElementById('new-param-label');
+  const payableSelect = document.getElementById('new-param-payable');
+  const val = valInput.value.trim();
+  if (!val) { valInput.focus(); return; }
+
+  editingParams.push({
+    value: val,
+    label: labelInput.value.trim(),
+    payable: payableSelect.value === '1'
+  });
+
+  valInput.value = '';
+  labelInput.value = '';
+  valInput.focus();
+  renderParamList();
+}
+
+document.getElementById('editor-save-btn').addEventListener('click', saveProfile);
+
+function saveProfile() {
+  const name = document.getElementById('editor-name').value.trim();
+  if (!name) { document.getElementById('editor-name').focus(); return; }
+
+  if (editingProfileId) {
+    const idx = profiles.findIndex(p => p.id === editingProfileId);
+    if (idx !== -1) {
+      profiles[idx] = {
+        ...profiles[idx],
+        name,
+        description: document.getElementById('editor-desc').value.trim(),
+        parameters: editingParams
+      };
+    }
+  } else {
+    profiles.push({
+      id: 'profile_' + Date.now(),
+      name,
+      description: document.getElementById('editor-desc').value.trim(),
+      parameters: editingParams,
+      createdAt: new Date().toISOString()
+    });
+  }
+
+  window.splitify.saveProfiles(profiles);
+  populateProfileSelect();
+  closeEditor();
+}
+
+document.getElementById('editor-delete-btn').addEventListener('click', () => {
+  if (!editingProfileId) return;
+  confirmDeleteProfile(editingProfileId);
+});
+
+function confirmDeleteProfile(id, e) {
+  if (e) e.stopPropagation();
+  const profile = profiles.find(p => p.id === id);
+  if (!profile) return;
+  if (!confirm(`Delete profile "${profile.name}"?`)) return;
+  profiles = profiles.filter(p => p.id !== id);
+  window.splitify.saveProfiles(profiles);
+  if (editingProfileId === id) closeEditor();
+  renderProfileList();
+  populateProfileSelect();
+}
+
+document.getElementById('new-profile-btn').addEventListener('click', newProfile);
+document.getElementById('editor-close-btn').addEventListener('click', closeEditor);
+document.getElementById('editor-modal-overlay').addEventListener('click', e => {
+  if (e.target === document.getElementById('editor-modal-overlay')) closeEditor();
+});
+
+// ── Import modal ────────────────────────────
+document.getElementById('import-btn').addEventListener('click', () => {
+  document.getElementById('import-textarea').value = '';
+  document.getElementById('modal-overlay').classList.add('open');
+});
+document.getElementById('modal-close').addEventListener('click', closeModal);
+document.getElementById('modal-cancel').addEventListener('click', closeModal);
+document.getElementById('modal-overlay').addEventListener('click', e => {
+  if (e.target === document.getElementById('modal-overlay')) closeModal();
+});
+
+function closeModal() {
+  document.getElementById('modal-overlay').classList.remove('open');
+}
+
+document.getElementById('modal-import').addEventListener('click', () => {
+  const text = document.getElementById('import-textarea').value;
+  const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+  lines.forEach(line => {
+    const excluded = line.startsWith('!');
+    const clean = excluded ? line.slice(1) : line;
+    const parts = clean.split(/[\t,]/).map(p => p.trim());
+    const val = parts[0];
+    const label = parts[1] || '';
+    if (val) {
+      editingParams.push({ value: val, label, payable: !excluded });
+    }
+  });
+  renderParamList();
+  closeModal();
+});
+
+// ────────────────────────────────────────────
+//  Split Tab
+// ────────────────────────────────────────────
+
+// ── File Drop ───────────────────────────────
+const dropZone = document.getElementById('drop-zone');
+const fileInput = document.getElementById('file-input');
+
+dropZone.addEventListener('click', () => fileInput.click());
+
+dropZone.addEventListener('dragover', e => {
+  e.preventDefault();
+  dropZone.classList.add('drag-over');
+});
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+dropZone.addEventListener('drop', async e => {
+  e.preventDefault();
+  dropZone.classList.remove('drag-over');
+  const file = e.dataTransfer.files[0];
+  if (file) await loadFile(file.path || file.name);
+});
+
+fileInput.addEventListener('change', async () => {
+  if (fileInput.files[0]) await loadFile(fileInput.files[0].path || fileInput.files[0].name);
+});
+
+document.getElementById('browse-output-btn').addEventListener('click', async () => {
+  const folder = await window.splitify.pickFolder();
+  if (folder) {
+    outputDir = folder;
+    const display = document.getElementById('output-path-display');
+    display.textContent = folder;
+    display.title = folder;
+  }
+});
+
+async function loadFile(filePath) {
+  selectedFile = filePath;
+  const name = filePath.split(/[\\/]/).pop();
+  document.getElementById('drop-text').textContent = name;
+  document.getElementById('drop-sub').textContent = 'Loading...';
+  dropZone.classList.add('has-file');
+
+  fileInfo = await window.splitify.readFileColumns(filePath);
+
+  if (fileInfo.error) {
+    document.getElementById('drop-sub').textContent = '⚠ ' + fileInfo.error;
+    dropZone.classList.remove('has-file');
+    return;
+  }
+
+  document.getElementById('drop-sub').textContent = `${fileInfo.totalRows} rows · ${fileInfo.headers.length} columns`;
+  populateColumnSelect(fileInfo.headers, fileInfo.samples);
+  showSplitSections();
+  validateSplitBtn();
+}
+
+function populateColumnSelect(headers, samples) {
+  const sel = document.getElementById('column-select');
+  sel.innerHTML = '<option value="">— select column —</option>';
+  headers.forEach(h => {
+    const opt = document.createElement('option');
+    opt.value = h.index;
+    opt.textContent = h.name;
+    sel.appendChild(opt);
+  });
+
+  // Auto-select if column name looks like cost center
+  const ccIdx = headers.findIndex(h =>
+    /cost.?cent|cc|center/i.test(h.name)
+  );
+  if (ccIdx !== -1) {
+    sel.value = headers[ccIdx].index;
+    showColumnSamples(headers[ccIdx].index, samples);
+  }
+}
+
+document.getElementById('column-select').addEventListener('change', function() {
+  const idx = this.value;
+  if (idx !== '' && fileInfo) showColumnSamples(parseInt(idx), fileInfo.samples);
+  else document.getElementById('column-samples').innerHTML = '';
+  validateSplitBtn();
+});
+
+function showColumnSamples(idx, samples) {
+  const el = document.getElementById('column-samples');
+  const vals = samples[idx] || [];
+  if (!vals.length) { el.innerHTML = ''; return; }
+  el.innerHTML = '<div style="font-size:9px;color:var(--text3);margin-bottom:3px;letter-spacing:0.5px;">SAMPLE VALUES</div>' +
+    vals.map(v => `<span class="sample-pill">${escHtml(String(v))}</span>`).join('');
+}
+
+function showSplitSections() {
+  ['section-column', 'section-profile', 'section-output', 'section-split'].forEach(id => {
+    document.getElementById(id).style.display = '';
+  });
+}
+
+function populateProfileSelect() {
+  const sel = document.getElementById('profile-select');
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">— no profile (keep all rows) —</option>';
+  profiles.forEach(p => {
+    const opt = document.createElement('option');
+    opt.value = p.id;
+    opt.textContent = p.name;
+    sel.appendChild(opt);
+  });
+  if (cur) sel.value = cur;
+  sel.dispatchEvent(new Event('change'));
+}
+
+document.getElementById('profile-select').addEventListener('change', function() {
+  const profile = profiles.find(p => p.id === this.value);
+  const preview = document.getElementById('profile-preview');
+  if (profile) {
+    // Build region map: label -> [values]
+    const regionMap = new Map();
+    const excluded = [];
+    profile.parameters.forEach(p => {
+      if (p.payable) {
+        const key = (p.label && p.label.trim()) ? p.label.trim() : p.value;
+        if (!regionMap.has(key)) regionMap.set(key, []);
+        regionMap.get(key).push(p.value);
+      } else {
+        excluded.push(p);
+      }
+    });
+
+    const regionRows = Array.from(regionMap.entries()).map(([region, vals]) => {
+      return `<div style="display:flex;align-items:baseline;gap:6px;padding:3px 0;border-bottom:1px solid var(--border)">
+        <span style="font-family:var(--sans);font-weight:700;font-size:11px;color:var(--accent);width:64px;flex-shrink:0">${escHtml(region)}</span>
+        <span style="font-size:10px;color:var(--text3)">${vals.map(v => `<code style="color:var(--text2);background:var(--bg3);padding:0 4px;border-radius:2px">${escHtml(v)}</code>`).join(' ')}</span>
+      </div>`;
+    }).join('');
+
+    const excRow = excluded.length
+      ? `<div style="display:flex;align-items:baseline;gap:6px;padding:3px 0">
+          <span style="font-family:var(--sans);font-weight:700;font-size:11px;color:var(--red);width:64px;flex-shrink:0">EXCL.</span>
+          <span style="font-size:10px;">${excluded.map(p => `<code style="color:#ff7a7a;background:var(--red-dim);padding:0 4px;border-radius:2px">${escHtml(p.value)}</code>`).join(' ')}</span>
+        </div>`
+      : '';
+
+    const today = new Date();
+    const dateStr = `${today.getFullYear()}${String(today.getMonth()+1).padStart(2,'0')}${String(today.getDate()).padStart(2,'0')}`;
+    const sampleRegion = regionMap.size ? Array.from(regionMap.keys())[0] : 'REGION';
+
+    preview.innerHTML = `
+      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:8px 10px;margin-top:4px;display:flex;flex-direction:column;gap:0">
+        ${regionRows}${excRow}
+      </div>
+      <div style="font-size:9px;color:var(--text3);margin-top:5px;letter-spacing:0.3px">
+        Output: <code style="color:var(--text2)">${dateStr}_[prefix]_${escHtml(sampleRegion)}.xlsx</code>
+        · ${regionMap.size} region file${regionMap.size !== 1 ? 's' : ''} · ${excluded.length} excluded
+      </div>`;
+  } else {
+    preview.innerHTML = '';
+  }
+  validateSplitBtn();
+});
+
+document.getElementById('custom-prefix-toggle').addEventListener('change', function() {
+  const inp = document.getElementById('custom-prefix');
+  inp.style.display = this.checked ? '' : 'none';
+  if (this.checked) inp.focus();
+});
+
+function validateSplitBtn() {
+  const btn = document.getElementById('split-btn');
+  const colSel = document.getElementById('column-select');
+  const ready = selectedFile && colSel.value !== '';
+  btn.disabled = !ready;
+}
+
+// ── Split Action ─────────────────────────────
+document.getElementById('split-btn').addEventListener('click', doSplit);
+
+async function doSplit() {
+  const btn = document.getElementById('split-btn');
+  const icon = document.getElementById('split-btn-icon');
+  const text = document.getElementById('split-btn-text');
+
+  const colIdx = parseInt(document.getElementById('column-select').value);
+  const profileId = document.getElementById('profile-select').value;
+  const profile = profiles.find(p => p.id === profileId);
+  const keepNonMatching = document.getElementById('keep-nonmatching').checked;
+  const customPfxToggle = document.getElementById('custom-prefix-toggle').checked;
+  const outputPrefix = customPfxToggle ? document.getElementById('custom-prefix').value.trim() : '';
+
+  // If no profile selected, use all column values as parameters
+  let parameters;
+  if (profile) {
+    parameters = profile.parameters;
+  } else {
+    // Split by all unique values — every row is payable
+    parameters = [];
+  }
+
+  const effectiveOutputDir = outputDir || (selectedFile ? selectedFile.replace(/[\\/][^\\/]+$/, '') : null);
+  if (!effectiveOutputDir) {
+    log('err', 'Could not determine output folder');
+    return;
+  }
+
+  btn.disabled = true;
+  icon.innerHTML = '<div class="spinner"></div>';
+  text.textContent = 'SPLITTING...';
+
+  showLog();
+  clearLog();
+  const today = new Date();
+  const dateStr = `${today.getFullYear()}${String(today.getMonth()+1).padStart(2,'0')}${String(today.getDate()).padStart(2,'0')}`;
+  const displayBase = outputPrefix || selectedFile.split(/[\\/]/).pop().replace(/\.[^.]+$/, '');
+  log('head', `Processing: ${selectedFile.split(/[\\/]/).pop()}`);
+  log('msg', `Format: ${dateStr}_${displayBase}_[REGION].xlsx`);
+  log('msg', `Column index: ${colIdx} · Profile: ${profile ? profile.name : 'none'}`);
+
+  const result = await window.splitify.splitFile({
+    filePath: selectedFile,
+    columnIndex: colIdx,
+    parameters,
+    outputDir: effectiveOutputDir,
+    keepNonMatching,
+    outputPrefix
+  });
+
+  btn.disabled = false;
+  icon.textContent = '▶';
+  text.textContent = 'SPLIT FILE';
+
+  if (result.error) {
+    log('err', 'Error: ' + result.error);
+    return;
+  }
+
+  log('ok', `✓ Done! ${result.created.length} file${result.created.length !== 1 ? 's' : ''} created`);
+  if (result.skipped.length) {
+    log('warn', `Skipped (no matching rows): ${result.skipped.join(', ')}`);
+  }
+
+  result.created.forEach(f => {
+    if (f.region === 'NON_MATCHING') {
+      log('warn', `  → ${f.file}  (${f.rows} rows — non-matching/excluded)`);
+    } else {
+      const ccList = f.costCenters && f.costCenters.length ? ` [${f.costCenters.join(', ')}]` : '';
+      log('ok', `  → ${f.file}  (${f.rows} rows${ccList})`);
+    }
+  });
+
+  // Show open folder button
+  const logArea = document.getElementById('log-area');
+  const bar = document.createElement('div');
+  bar.className = 'log-result-bar';
+  bar.innerHTML = `<span>✓ ${result.created.length} files created</span>
+    <button class="btn btn-accent" style="font-size:10px;padding:4px 10px" id="open-folder-btn">Open Folder ↗</button>`;
+  logArea.appendChild(bar);
+
+  document.getElementById('open-folder-btn').addEventListener('click', () => {
+    window.splitify.openFolder(effectiveOutputDir);
+  });
+}
+
+function showLog() {
+  document.getElementById('log-area').classList.add('visible');
+}
+
+function clearLog() {
+  document.getElementById('log-area').innerHTML = '';
+}
+
+function log(type, msg) {
+  const area = document.getElementById('log-area');
+  const line = document.createElement('div');
+  const now = new Date();
+  const time = `${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}:${now.getSeconds().toString().padStart(2,'0')}`;
+  const typeClass = { ok: 'log-ok', err: 'log-err', warn: 'log-warn', msg: '', head: 'log-head' }[type] || '';
+  line.className = `log-line ${typeClass}`;
+  line.innerHTML = `<span class="log-time">${time}</span><span class="log-msg">${escHtml(msg)}</span>`;
+  area.appendChild(line);
+  area.scrollTop = area.scrollHeight;
+}
+
+// ────────────────────────────────────────────
+//  Utilities
+// ────────────────────────────────────────────
+function escHtml(str) {
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+function genId() {
+  return 'p_' + Math.random().toString(36).substr(2, 9);
+}
+
+// ────────────────────────────────────────────
+//  Auto-Updater
+// ────────────────────────────────────────────
+if (window.splitify && window.splitify.onUpdateAvailable) {
+  window.splitify.onUpdateAvailable((version) => {
+    const banner = document.getElementById('update-banner');
+    document.getElementById('ub-text').textContent = `v${version} available — downloading...`;
+    banner.classList.add('visible');
+  });
+
+  window.splitify.onUpdateProgress((percent) => {
+    document.getElementById('ub-text').textContent = `Downloading update... ${percent}%`;
+    document.getElementById('ub-progress-wrap').style.display = '';
+    document.getElementById('ub-bar').style.width = percent + '%';
+  });
+
+  window.splitify.onUpdateDownloaded(() => {
+    document.getElementById('ub-text').textContent = 'Update ready — restart to install';
+    document.getElementById('ub-progress-wrap').style.display = 'none';
+    document.getElementById('ub-btn').style.display = '';
+  });
+
+  document.getElementById('ub-btn').addEventListener('click', () => {
+    window.splitify.installUpdate();
+  });
+}
+
+</script>
+</body>
+</html>
