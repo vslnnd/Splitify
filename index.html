@@ -1505,25 +1505,7 @@
           </div>
         </div>
 
-        <!-- Default Profile section -->
-        <div class="settings-section">
-          <div class="settings-section-title">Default Profile</div>
-          <div class="settings-row">
-            <div class="settings-row-info">
-              <div class="settings-row-label">Favorite Profile</div>
-              <div class="settings-row-sub">Auto-selected when you open a file</div>
-            </div>
-            <div class="settings-row-right">
-              <div class="select-wrap" style="width:150px">
-                <select class="select" id="setting-fav-profile" style="font-size:12px">
-                  <option value="">None</option>
-                </select>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Import / Export Profiles -->
+<!-- Import / Export Profiles -->
         <div class="settings-section">
           <div class="settings-section-title">Profiles — Import / Export</div>
 
@@ -1758,6 +1740,8 @@
         if (colSel.options.length <= 1) {
           populateColumnSelect(info.headers, info.samples);
         }
+        // Auto-detect profile from client name column
+        autoDetectProfile(info.headers, info.samples);
         computePreviews(item);
       }
 
@@ -1824,6 +1808,37 @@
       }
     }
 
+    // Auto-detect profile based on client name column values
+    function autoDetectProfile(headers, samples) {
+      // Only auto-detect if no profile is already selected
+      const profileSel = document.getElementById('profile-select');
+      if (profileSel.value) return; // already chosen, don't override
+
+      // Find a "client" column
+      const clientColIdx = headers.findIndex(h =>
+        /^client(\s*name)?$|^client\s*$/i.test(h.name.trim())
+      );
+      if (clientColIdx === -1) return;
+
+      // Get unique values from that column
+      const vals = (samples[clientColIdx] || []).map(v => String(v).trim().toLowerCase());
+      if (!vals.length) return;
+
+      // Try to match any profile name against these values
+      const matched = profiles.find(p =>
+        vals.some(v => v === p.name.trim().toLowerCase())
+      );
+
+      if (matched) {
+        profileSel.value = matched.id;
+        // Show a subtle indicator in the profile select
+        profileSel.style.borderColor = 'var(--accent)';
+        setTimeout(() => { profileSel.style.borderColor = ''; }, 2500);
+        recomputeAllPreviews();
+        updateSplitBtn();
+      }
+    }
+
     document.getElementById('column-select').addEventListener('change', function () {
       const idx = this.value;
       const firstItem = queue.find(q => q.samples);
@@ -1846,7 +1861,7 @@
 
     function populateProfileSelect() {
       const sel = document.getElementById('profile-select');
-      const cur = sel.value || (appSettings && appSettings.favoriteProfileId) || '';
+      const cur = sel.value;
       sel.innerHTML = '<option value="">— no profile —</option>';
       profiles.forEach(p => {
         const opt = document.createElement('option');
@@ -2319,7 +2334,6 @@
     // ═══════════════════════════════════════════
     let appSettings = {
       theme: 'dark',
-      favoriteProfileId: null,
       updateIntervalHours: 4,
       checkUpdatesOnStartup: true
     };
@@ -2337,21 +2351,9 @@
       });
 
       // Populate favorite profile select
-      populateFavProfileSelect();
     }
 
-    function populateFavProfileSelect() {
-      const sel = document.getElementById('setting-fav-profile');
-      const cur = appSettings.favoriteProfileId;
-      sel.innerHTML = '<option value="">None</option>';
-      profiles.forEach(p => {
-        const opt = document.createElement('option');
-        opt.value = p.id;
-        opt.textContent = p.name;
-        sel.appendChild(opt);
-      });
-      if (cur) sel.value = cur;
-    }
+
 
     async function saveAppSettings() {
       await window.splitify.saveSettings(appSettings);
@@ -2384,15 +2386,7 @@
     });
 
     // Favorite profile
-    document.getElementById('setting-fav-profile').addEventListener('change', function () {
-      appSettings.favoriteProfileId = this.value || null;
-      saveAppSettings();
-      // Auto-apply to profile select on split tab
-      if (appSettings.favoriteProfileId) {
-        const sel = document.getElementById('profile-select');
-        if (sel) sel.value = appSettings.favoriteProfileId;
-      }
-    });
+
 
     // Check for updates button
     document.getElementById('check-updates-btn').addEventListener('click', async () => {
@@ -2416,10 +2410,38 @@
 
     // Feedback
     document.getElementById('feedback-email-btn').addEventListener('click', () => {
-      const text = document.getElementById('feedback-text').value.trim();
-      const subject = encodeURIComponent('Splitify Feedback');
-      const body = encodeURIComponent(text || 'Hi, I have some feedback about Splitify...');
+      const textEl = document.getElementById('feedback-text');
+      const text = textEl.value.trim();
+      const btn = document.getElementById('feedback-email-btn');
+
+      if (!text) {
+        // Shake the textarea to indicate it's required
+        textEl.style.borderColor = 'var(--red)';
+        textEl.setAttribute('placeholder', 'Please enter your feedback before sending...');
+        textEl.focus();
+        setTimeout(() => { textEl.style.borderColor = ''; }, 2000);
+        return;
+      }
+
+      const version = document.getElementById('app-version')?.textContent || 'unknown';
+      const subject = encodeURIComponent(`Splitify Feedback (${version})`);
+      const body = encodeURIComponent(`${text}\n\n---\nSplitify ${version}`);
       window.splitify.openExternal(`mailto:nvasiljevic42@gmail.com?subject=${subject}&body=${body}`);
+
+      // Show confirmation
+      const originalText = btn.textContent;
+      btn.textContent = '✓ Email Client Opened';
+      btn.style.background = 'rgba(120,232,96,0.25)';
+      btn.style.borderColor = 'var(--accent2)';
+      btn.style.color = 'var(--accent2)';
+      textEl.value = '';
+
+      setTimeout(() => {
+        btn.textContent = originalText;
+        btn.style.background = '';
+        btn.style.borderColor = '';
+        btn.style.color = '';
+      }, 3000);
     });
 
     document.getElementById('feedback-github-btn').addEventListener('click', () => {
@@ -2508,8 +2530,7 @@
         window.splitify.saveProfiles(profiles);
         renderProfileList();
         populateProfileSelect();
-        populateFavProfileSelect();
-        this.value = '';
+          this.value = '';
       } catch (e) {
         alert('Failed to read file: ' + e.message);
       }
