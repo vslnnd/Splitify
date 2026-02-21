@@ -1,6 +1,6 @@
 {
   "name": "splitify",
-  "version": "1.2.5",
+  "version": "1.2.6",
   "description": "Excel file splitter with profile management",
   "main": "main.js",
   "scripts": {
@@ -16,7 +16,7 @@
       "provider": "github",
       "owner": "vslnnd",
       "repo": "Splitify",
-      "private": true
+      "private": false
     },
     "win": {
       "target": "nsis",
@@ -32,7 +32,8 @@
   },
   "dependencies": {
     "electron-updater": "^6.3.9",
-    "xlsx": "^0.18.5"
+    "xlsx": "^0.18.5",
+    "electron-log": "^5.1.2"
   },
   "devDependencies": {
     "electron": "^33.4.11",
