@@ -4,7 +4,29 @@ const path = require('path');
 const fs = require('fs');
 const XLSX = require('xlsx');
 
-const PROFILES_PATH = path.join(app.getPath('userData'), 'splitify_profiles.json');
+const PROFILES_PATH  = path.join(app.getPath('userData'), 'splitify_profiles.json');
+const SETTINGS_PATH  = path.join(app.getPath('userData'), 'splitify_settings.json');
+
+const DEFAULT_SETTINGS = {
+  theme: 'dark',
+  favoriteProfileId: null,
+  updateIntervalHours: 4,
+  checkUpdatesOnStartup: true
+};
+
+function loadSettings() {
+  try {
+    if (fs.existsSync(SETTINGS_PATH)) {
+      return { ...DEFAULT_SETTINGS, ...JSON.parse(fs.readFileSync(SETTINGS_PATH, 'utf8')) };
+    }
+  } catch(e) {}
+  return { ...DEFAULT_SETTINGS };
+}
+
+function saveSettings(settings) {
+  try { fs.writeFileSync(SETTINGS_PATH, JSON.stringify(settings, null, 2)); return true; }
+  catch(e) { return false; }
+}
 
 // ─── Default SElectric Profile ────────────────────────────────────────────────
 const DEFAULT_PROFILES = [
@@ -98,11 +120,22 @@ app.whenReady().then(() => {
   autoUpdater.logger = require('electron-log');
   autoUpdater.logger.transports.file.level = 'info';
 
-  setTimeout(() => {
+  const settings = loadSettings();
+
+  function checkForUpdates() {
     autoUpdater.checkForUpdates().catch(err => {
       if (mainWindow) mainWindow.webContents.send('update-error', err.message);
     });
-  }, 3000);
+  }
+
+  // Startup check
+  if (settings.checkUpdatesOnStartup) {
+    setTimeout(checkForUpdates, 3000);
+  }
+
+  // Periodic check
+  const intervalMs = (settings.updateIntervalHours || 4) * 60 * 60 * 1000;
+  setInterval(checkForUpdates, intervalMs);
 
   autoUpdater.on('checking-for-update', () => {
     if (mainWindow) mainWindow.webContents.send('update-checking');
@@ -298,3 +331,12 @@ ipcMain.handle('open-folder', (_, folderPath) => {
 ipcMain.handle('install-update', () => {
   autoUpdater.quitAndInstall();
 });
+
+ipcMain.handle('get-settings', () => loadSettings());
+ipcMain.handle('save-settings', (_, settings) => saveSettings(settings));
+ipcMain.handle('check-for-updates', () => {
+  autoUpdater.checkForUpdates().catch(err => {
+    if (mainWindow) mainWindow.webContents.send('update-error', err.message);
+  });
+});
+ipcMain.handle('open-external', (_, url) => shell.openExternal(url));

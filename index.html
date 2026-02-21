@@ -326,6 +326,81 @@
   .modal-title { font-family: var(--sans); font-weight: 700; font-size: 15px; flex: 1; }
   .modal-body { padding: 16px; overflow-y: auto; display: flex; flex-direction: column; gap: 14px; flex: 1; }
   .modal-footer { padding: 12px 16px; border-top: 1px solid var(--border); display: flex; gap: 6px; justify-content: flex-end; }
+
+  /* ══════════════════════════════════
+     SETTINGS TAB
+  ══════════════════════════════════ */
+  #settings-panel {
+    flex: 1; overflow-y: auto; padding: 10px 16px 20px;
+    display: flex; flex-direction: column; gap: 6px;
+  }
+
+  .settings-section {
+    background: var(--bg2); border: 1px solid var(--border);
+    border-radius: 8px; overflow: hidden; margin-bottom: 6px;
+  }
+
+  .settings-section-title {
+    padding: 9px 14px 8px; font-size: 10px; font-weight: 700;
+    letter-spacing: 0.8px; text-transform: uppercase;
+    color: var(--text3); border-bottom: 1px solid var(--border);
+    background: var(--bg3);
+  }
+
+  .settings-row {
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px 14px; border-bottom: 1px solid var(--border);
+  }
+  .settings-row:last-child { border-bottom: none; }
+
+  .settings-row-info { flex: 1; min-width: 0; }
+  .settings-row-label { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 2px; }
+  .settings-row-sub { font-size: 11px; font-weight: 400; color: var(--text3); }
+
+  /* Toggle switch */
+  .toggle { position: relative; width: 42px; height: 24px; flex-shrink: 0; }
+  .toggle input { opacity: 0; width: 0; height: 0; }
+  .toggle-slider {
+    position: absolute; inset: 0; cursor: pointer;
+    background: var(--bg4); border: 1px solid var(--border2);
+    border-radius: 24px; transition: all var(--tr);
+  }
+  .toggle-slider::before {
+    content: ''; position: absolute; width: 16px; height: 16px;
+    left: 3px; top: 3px; background: var(--text3);
+    border-radius: 50%; transition: all var(--tr);
+  }
+  .toggle input:checked + .toggle-slider { background: var(--accent-dim); border-color: var(--accent2); }
+  .toggle input:checked + .toggle-slider::before { transform: translateX(18px); background: var(--accent2); }
+
+  /* Theme switcher */
+  .theme-switcher { display: flex; gap: 4px; flex-shrink: 0; }
+  .theme-btn {
+    padding: 5px 11px; font-family: var(--mono); font-size: 11px; font-weight: 700;
+    cursor: pointer; border-radius: var(--radius); border: 1px solid var(--border2);
+    background: var(--bg3); color: var(--text3); transition: all var(--tr);
+  }
+  .theme-btn.active { background: var(--accent-dim); color: var(--accent); border-color: rgba(184,242,160,0.3); }
+  .theme-btn:hover:not(.active) { background: var(--bg4); color: var(--text2); }
+
+  /* ── Light theme overrides ── */
+  body.light {
+    --bg:    #f5f5f5;
+    --bg2:   #ffffff;
+    --bg3:   #eeeeee;
+    --bg4:   #e4e4e4;
+    --border:  #d0d0d0;
+    --border2: #bbbbbb;
+    --text:  #1a1a1a;
+    --text2: #444444;
+    --text3: #888888;
+    --accent-dim:  rgba(60,160,40,0.12);
+    --accent-dim2: rgba(60,160,40,0.06);
+    --accent:  #2d8a1e;
+    --accent2: #1e6e12;
+    --red-dim: rgba(200,40,40,0.1);
+  }
+
 </style>
 </head>
 <body>
@@ -366,6 +441,7 @@
   <div id="tabs">
     <div class="tab active" data-tab="split">⚡ Split File</div>
     <div class="tab" data-tab="profiles">◈ Profiles</div>
+    <div class="tab" data-tab="settings">⚙ Settings</div>
   </div>
 
   <!-- ════════════ SPLIT TAB ════════════ -->
@@ -464,6 +540,127 @@
         <button class="btn btn-accent" id="new-profile-btn">+ New Profile</button>
       </div>
       <div id="profile-list"></div>
+    </div>
+  </div>
+
+  <!-- ════════════ SETTINGS TAB ════════════ -->
+  <div id="tab-settings" class="tab-panel">
+    <div id="settings-panel">
+
+      <!-- Updates section -->
+      <div class="settings-section">
+        <div class="settings-section-title">Updates</div>
+
+        <div class="settings-row">
+          <div class="settings-row-info">
+            <div class="settings-row-label">Current Version</div>
+            <div class="settings-row-sub" id="settings-version">v—</div>
+          </div>
+          <button class="btn btn-accent" id="check-updates-btn" style="flex-shrink:0">Check Now</button>
+        </div>
+
+        <div class="settings-row">
+          <div class="settings-row-info">
+            <div class="settings-row-label">Check on startup</div>
+            <div class="settings-row-sub">Automatically check when app launches</div>
+          </div>
+          <label class="toggle">
+            <input type="checkbox" id="setting-startup-check" checked>
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+
+        <div class="settings-row">
+          <div class="settings-row-info">
+            <div class="settings-row-label">Periodic check interval</div>
+            <div class="settings-row-sub">How often to check while app is open</div>
+          </div>
+          <div class="select-wrap" style="width:130px">
+            <select class="select" id="setting-interval" style="font-size:12px">
+              <option value="1">Every hour</option>
+              <option value="2">Every 2 hours</option>
+              <option value="4" selected>Every 4 hours</option>
+              <option value="8">Every 8 hours</option>
+              <option value="24">Once a day</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="settings-row" id="update-status-row" style="display:none">
+          <div class="settings-row-info">
+            <div class="settings-row-label" id="update-status-label">Checking...</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Appearance section -->
+      <div class="settings-section">
+        <div class="settings-section-title">Appearance</div>
+
+        <div class="settings-row">
+          <div class="settings-row-info">
+            <div class="settings-row-label">Theme</div>
+            <div class="settings-row-sub">Switch between dark and light mode</div>
+          </div>
+          <div class="theme-switcher">
+            <button class="theme-btn active" id="theme-dark" data-theme="dark">◑ Dark</button>
+            <button class="theme-btn" id="theme-light" data-theme="light">○ Light</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Default Profile section -->
+      <div class="settings-section">
+        <div class="settings-section-title">Default Profile</div>
+        <div class="settings-row">
+          <div class="settings-row-info">
+            <div class="settings-row-label">Favorite Profile</div>
+            <div class="settings-row-sub">Auto-selected when you open a file</div>
+          </div>
+          <div class="select-wrap" style="width:160px">
+            <select class="select" id="setting-fav-profile" style="font-size:12px">
+              <option value="">None</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Feedback section -->
+      <div class="settings-section">
+        <div class="settings-section-title">Feedback</div>
+        <div class="settings-row" style="flex-direction:column;align-items:stretch;gap:10px">
+          <div class="settings-row-sub" style="font-size:12px;color:var(--text2)">
+            Found a bug or have a suggestion? Send feedback directly.
+          </div>
+          <textarea class="input" id="feedback-text" rows="4"
+            placeholder="Describe your feedback, bug report, or feature request..."
+            style="resize:vertical;font-size:12px;line-height:1.6;font-weight:400"></textarea>
+          <div style="display:flex;gap:8px;justify-content:flex-end">
+            <button class="btn btn-ghost" id="feedback-github-btn">Open GitHub Issue ↗</button>
+            <button class="btn btn-accent" id="feedback-email-btn">Send via Email</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- About section -->
+      <div class="settings-section">
+        <div class="settings-section-title">About</div>
+        <div class="settings-row">
+          <div class="settings-row-info">
+            <div class="settings-row-label">VSL Splitify</div>
+            <div class="settings-row-sub">Excel file splitter with profile management</div>
+          </div>
+          <span style="font-size:10px;font-weight:700;color:var(--text3);letter-spacing:0.5px;text-transform:uppercase">VSL Software</span>
+        </div>
+        <div class="settings-row">
+          <div class="settings-row-info">
+            <div class="settings-row-label">Source Code</div>
+            <div class="settings-row-sub">github.com/vslnnd/Splitify</div>
+          </div>
+          <button class="btn btn-ghost" id="github-btn">View ↗</button>
+        </div>
+      </div>
+
     </div>
   </div>
 
@@ -719,7 +916,7 @@ function showColumnSamples(idx, samples) {
 
 function populateProfileSelect() {
   const sel = document.getElementById('profile-select');
-  const cur = sel.value;
+  const cur = sel.value || (appSettings && appSettings.favoriteProfileId) || '';
   sel.innerHTML = '<option value="">— no profile —</option>';
   profiles.forEach(p => {
     const opt = document.createElement('option');
@@ -1186,6 +1383,153 @@ if (window.splitify && window.splitify.onUpdateAvailable) {
 function escHtml(str) {
   return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
+
+// ═══════════════════════════════════════════
+//  SETTINGS
+// ═══════════════════════════════════════════
+let appSettings = {
+  theme: 'dark',
+  favoriteProfileId: null,
+  updateIntervalHours: 4,
+  checkUpdatesOnStartup: true
+};
+
+async function loadAndApplySettings() {
+  appSettings = await window.splitify.getSettings();
+  applyTheme(appSettings.theme);
+
+  document.getElementById('setting-startup-check').checked = appSettings.checkUpdatesOnStartup !== false;
+  document.getElementById('setting-interval').value = appSettings.updateIntervalHours || 4;
+
+  // Set theme buttons
+  document.querySelectorAll('.theme-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.theme === appSettings.theme);
+  });
+
+  // Populate favorite profile select
+  populateFavProfileSelect();
+}
+
+function populateFavProfileSelect() {
+  const sel = document.getElementById('setting-fav-profile');
+  const cur = appSettings.favoriteProfileId;
+  sel.innerHTML = '<option value="">None</option>';
+  profiles.forEach(p => {
+    const opt = document.createElement('option');
+    opt.value = p.id;
+    opt.textContent = p.name;
+    sel.appendChild(opt);
+  });
+  if (cur) sel.value = cur;
+}
+
+async function saveAppSettings() {
+  await window.splitify.saveSettings(appSettings);
+}
+
+function applyTheme(theme) {
+  document.body.classList.toggle('light', theme === 'light');
+}
+
+// Theme buttons
+document.querySelectorAll('.theme-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    appSettings.theme = btn.dataset.theme;
+    applyTheme(appSettings.theme);
+    document.querySelectorAll('.theme-btn').forEach(b => b.classList.toggle('active', b.dataset.theme === appSettings.theme));
+    saveAppSettings();
+  });
+});
+
+// Startup check toggle
+document.getElementById('setting-startup-check').addEventListener('change', function() {
+  appSettings.checkUpdatesOnStartup = this.checked;
+  saveAppSettings();
+});
+
+// Interval select
+document.getElementById('setting-interval').addEventListener('change', function() {
+  appSettings.updateIntervalHours = parseInt(this.value);
+  saveAppSettings();
+});
+
+// Favorite profile
+document.getElementById('setting-fav-profile').addEventListener('change', function() {
+  appSettings.favoriteProfileId = this.value || null;
+  saveAppSettings();
+  // Auto-apply to profile select on split tab
+  if (appSettings.favoriteProfileId) {
+    const sel = document.getElementById('profile-select');
+    if (sel) sel.value = appSettings.favoriteProfileId;
+  }
+});
+
+// Check for updates button
+document.getElementById('check-updates-btn').addEventListener('click', async () => {
+  const btn = document.getElementById('check-updates-btn');
+  const statusRow = document.getElementById('update-status-row');
+  const statusLabel = document.getElementById('update-status-label');
+
+  btn.disabled = true;
+  btn.textContent = 'Checking...';
+  statusRow.style.display = '';
+  statusLabel.textContent = 'Checking for updates...';
+  statusLabel.style.color = 'var(--text3)';
+
+  await window.splitify.checkForUpdates();
+
+  setTimeout(() => {
+    btn.disabled = false;
+    btn.textContent = 'Check Now';
+  }, 3000);
+});
+
+// Feedback
+document.getElementById('feedback-email-btn').addEventListener('click', () => {
+  const text = document.getElementById('feedback-text').value.trim();
+  const subject = encodeURIComponent('Splitify Feedback');
+  const body = encodeURIComponent(text || 'Hi, I have some feedback about Splitify...');
+  window.splitify.openExternal(`mailto:nvasiljevic42@gmail.com?subject=${subject}&body=${body}`);
+});
+
+document.getElementById('feedback-github-btn').addEventListener('click', () => {
+  const text = document.getElementById('feedback-text').value.trim();
+  const title = encodeURIComponent('Feedback / Bug Report');
+  const body = encodeURIComponent(text || '');
+  window.splitify.openExternal(`https://github.com/vslnnd/Splitify/issues/new?title=${title}&body=${body}`);
+});
+
+document.getElementById('github-btn').addEventListener('click', () => {
+  window.splitify.openExternal('https://github.com/vslnnd/Splitify');
+});
+
+// Update status in settings panel
+if (window.splitify && window.splitify.onUpdateChecking) {
+  window.splitify.onUpdateChecking(() => {
+    const el = document.getElementById('update-status-label');
+    const row = document.getElementById('update-status-row');
+    if (el) { el.textContent = 'Checking for updates...'; el.style.color = 'var(--text3)'; row.style.display = ''; }
+  });
+}
+if (window.splitify && window.splitify.onUpdateNotAvailable) {
+  window.splitify.onUpdateNotAvailable(() => {
+    const el = document.getElementById('update-status-label');
+    const row = document.getElementById('update-status-row');
+    if (el) { el.textContent = '✓ You are on the latest version'; el.style.color = 'var(--accent2)'; row.style.display = ''; }
+  });
+}
+
+// Show settings version label
+if (window.splitify && window.splitify.onAppVersion) {
+  window.splitify.onAppVersion(v => {
+    const el = document.getElementById('settings-version');
+    if (el) el.textContent = 'v' + v;
+  });
+}
+
+// Init settings after profiles load
+loadAndApplySettings();
+
 </script>
 </body>
 </html>
