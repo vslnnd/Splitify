@@ -331,35 +331,66 @@
      SETTINGS TAB
   ══════════════════════════════════ */
   #settings-panel {
-    flex: 1; overflow-y: auto; overflow-x: hidden; padding: 10px 16px 20px;
-    display: flex; flex-direction: column; gap: 6px;
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 12px 16px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
   }
 
   .settings-section {
-    background: var(--bg2); border: 1px solid var(--border);
-    border-radius: 8px; overflow: hidden; margin-bottom: 6px;
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+    width: 100%;
   }
 
   .settings-section-title {
-    padding: 9px 14px 8px; font-size: 10px; font-weight: 700;
+    padding: 8px 14px;
+    font-size: 10px; font-weight: 700;
     letter-spacing: 0.8px; text-transform: uppercase;
-    color: var(--text3); border-bottom: 1px solid var(--border);
+    color: var(--text3);
+    border-bottom: 1px solid var(--border);
     background: var(--bg3);
   }
 
   .settings-row {
-    display: flex; align-items: center; gap: 10px;
-    padding: 11px 14px; border-bottom: 1px solid var(--border);
-    min-width: 0; overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--border);
+    width: 100%;
+    box-sizing: border-box;
   }
   .settings-row:last-child { border-bottom: none; }
 
-  .settings-row-info { flex: 1; min-width: 0; overflow: hidden; }
-  .settings-row-label { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .settings-row-sub { font-size: 11px; font-weight: 400; color: var(--text3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .settings-row-info {
+    flex: 1;
+    min-width: 0;
+  }
+  .settings-row-label {
+    font-size: 13px; font-weight: 600;
+    color: var(--text); margin-bottom: 2px;
+  }
+  .settings-row-sub {
+    font-size: 11px; font-weight: 400;
+    color: var(--text3); line-height: 1.4;
+  }
+
+  .settings-row-right {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
 
   /* Toggle switch */
-  .toggle { position: relative; width: 42px; height: 24px; flex-shrink: 0; }
+  .toggle { position: relative; width: 42px; height: 24px; flex-shrink: 0; cursor: pointer; }
   .toggle input { opacity: 0; width: 0; height: 0; }
   .toggle-slider {
     position: absolute; inset: 0; cursor: pointer;
@@ -375,11 +406,12 @@
   .toggle input:checked + .toggle-slider::before { transform: translateX(18px); background: var(--accent2); }
 
   /* Theme switcher */
-  .theme-switcher { display: flex; gap: 4px; flex-shrink: 0; }
+  .theme-switcher { display: flex; gap: 4px; }
   .theme-btn {
-    padding: 5px 11px; font-family: var(--mono); font-size: 11px; font-weight: 700;
+    padding: 6px 14px; font-family: var(--mono); font-size: 11px; font-weight: 700;
     cursor: pointer; border-radius: var(--radius); border: 1px solid var(--border2);
     background: var(--bg3); color: var(--text3); transition: all var(--tr);
+    white-space: nowrap;
   }
   .theme-btn.active { background: var(--accent-dim); color: var(--accent); border-color: rgba(184,242,160,0.3); }
   .theme-btn:hover:not(.active) { background: var(--bg4); color: var(--text2); }
@@ -557,7 +589,7 @@
             <div class="settings-row-label">Current Version</div>
             <div class="settings-row-sub" id="settings-version">v—</div>
           </div>
-          <button class="btn btn-accent" id="check-updates-btn" style="flex-shrink:0">Check Now</button>
+          <div class="settings-row-right"><button class="btn btn-accent" id="check-updates-btn">Check Now</button></div>
         </div>
 
         <div class="settings-row">
@@ -565,10 +597,10 @@
             <div class="settings-row-label">Check on startup</div>
             <div class="settings-row-sub">Automatically check when app launches</div>
           </div>
-          <label class="toggle">
+          <div class="settings-row-right"><label class="toggle">
             <input type="checkbox" id="setting-startup-check" checked>
             <span class="toggle-slider"></span>
-          </label>
+          </label></div>
         </div>
 
         <div class="settings-row">
@@ -576,7 +608,7 @@
             <div class="settings-row-label">Periodic check interval</div>
             <div class="settings-row-sub">How often to check while app is open</div>
           </div>
-          <div class="select-wrap" style="width:130px;flex-shrink:0">
+          <div class="settings-row-right"><div class="select-wrap" style="width:130px">
             <select class="select" id="setting-interval" style="font-size:12px">
               <option value="1">Every hour</option>
               <option value="2">Every 2 hours</option>
@@ -584,7 +616,7 @@
               <option value="8">Every 8 hours</option>
               <option value="24">Once a day</option>
             </select>
-          </div>
+          </div></div>
         </div>
 
         <div class="settings-row" id="update-status-row" style="display:none">
@@ -603,10 +635,10 @@
             <div class="settings-row-label">Theme</div>
             <div class="settings-row-sub">Switch between dark and light mode</div>
           </div>
-          <div class="theme-switcher">
+          <div class="settings-row-right"><div class="theme-switcher">
             <button class="theme-btn active" id="theme-dark" data-theme="dark">◑ Dark</button>
             <button class="theme-btn" id="theme-light" data-theme="light">○ Light</button>
-          </div>
+          </div></div>
         </div>
       </div>
 
@@ -618,11 +650,11 @@
             <div class="settings-row-label">Favorite Profile</div>
             <div class="settings-row-sub">Auto-selected when you open a file</div>
           </div>
-          <div class="select-wrap" style="width:150px;flex-shrink:0">
+          <div class="settings-row-right"><div class="select-wrap" style="width:150px">
             <select class="select" id="setting-fav-profile" style="font-size:12px">
               <option value="">None</option>
             </select>
-          </div>
+          </div></div>
         </div>
       </div>
 
@@ -635,7 +667,7 @@
             <div class="settings-row-label">Export All Profiles</div>
             <div class="settings-row-sub">Save all profiles to a .json backup file</div>
           </div>
-          <button class="btn btn-accent" id="export-profiles-btn" style="flex-shrink:0">Export ↓</button>
+          <div class="settings-row-right"><button class="btn btn-accent" id="export-profiles-btn">Export ↓</button></div>
         </div>
 
         <div class="settings-row">
@@ -643,7 +675,7 @@
             <div class="settings-row-label">Import Profiles</div>
             <div class="settings-row-sub">Load profiles from a .json backup file</div>
           </div>
-          <div style="display:flex;gap:6px;flex-shrink:0">
+          <div class="settings-row-right">
             <select class="select" id="import-mode" style="width:110px;font-size:11px">
               <option value="merge">Merge</option>
               <option value="replace">Replace all</option>
@@ -679,14 +711,14 @@
             <div class="settings-row-label">VSL Splitify</div>
             <div class="settings-row-sub">Excel file splitter with profile management</div>
           </div>
-          <span style="font-size:10px;font-weight:700;color:var(--text3);letter-spacing:0.5px;text-transform:uppercase">VSL Software</span>
+          <div class="settings-row-right"><span style="font-size:10px;font-weight:700;color:var(--text3);letter-spacing:0.5px;text-transform:uppercase">VSL SOFTWARE</span></div>
         </div>
         <div class="settings-row">
           <div class="settings-row-info">
             <div class="settings-row-label">Source Code</div>
             <div class="settings-row-sub">github.com/vslnnd/Splitify</div>
           </div>
-          <button class="btn btn-ghost" id="github-btn">View ↗</button>
+          <div class="settings-row-right"><button class="btn btn-ghost" id="github-btn">View ↗</button></div>
         </div>
       </div>
 
