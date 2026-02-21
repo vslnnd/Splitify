@@ -1142,20 +1142,41 @@ if (window.splitify && window.splitify.onAppVersion) {
 }
 
 if (window.splitify && window.splitify.onUpdateAvailable) {
+  window.splitify.onUpdateChecking && window.splitify.onUpdateChecking(() => {
+    console.log('[updater] checking for updates...');
+  });
+
   window.splitify.onUpdateAvailable(version => {
+    console.log('[updater] update available:', version);
     document.getElementById('ub-text').textContent = `v${version} available — downloading...`;
     document.getElementById('update-banner').classList.add('visible');
   });
+
+  window.splitify.onUpdateNotAvailable && window.splitify.onUpdateNotAvailable(version => {
+    console.log('[updater] up to date, current:', version);
+  });
+
   window.splitify.onUpdateProgress(percent => {
     document.getElementById('ub-text').textContent = `Downloading update... ${percent}%`;
     document.getElementById('ub-progress-wrap').style.display = '';
     document.getElementById('ub-bar').style.width = percent + '%';
   });
+
   window.splitify.onUpdateDownloaded(() => {
     document.getElementById('ub-text').textContent = 'Update ready — restart to install';
     document.getElementById('ub-progress-wrap').style.display = 'none';
     document.getElementById('ub-btn').style.display = '';
   });
+
+  window.splitify.onUpdateError && window.splitify.onUpdateError(msg => {
+    console.error('[updater] error:', msg);
+    document.getElementById('ub-text').textContent = `Update check failed: ${msg}`;
+    document.getElementById('update-banner').classList.add('visible');
+    document.getElementById('update-banner').style.background = 'rgba(255,92,92,0.08)';
+    document.getElementById('update-banner').style.borderBottomColor = 'rgba(255,92,92,0.2)';
+    document.getElementById('ub-text').style.color = 'var(--red)';
+  });
+
   document.getElementById('ub-btn').addEventListener('click', () => window.splitify.installUpdate());
 }
 

@@ -95,12 +95,25 @@ app.whenReady().then(() => {
   // ── Auto-updater setup ────────────────────────────────────────────────────
   autoUpdater.autoDownload = true;
   autoUpdater.autoInstallOnAppQuit = true;
+  autoUpdater.logger = require('electron-log');
+  autoUpdater.logger.transports.file.level = 'info';
 
-  // Check for updates 3 seconds after launch (give window time to load)
-  setTimeout(() => autoUpdater.checkForUpdates().catch(() => {}), 3000);
+  setTimeout(() => {
+    autoUpdater.checkForUpdates().catch(err => {
+      if (mainWindow) mainWindow.webContents.send('update-error', err.message);
+    });
+  }, 3000);
+
+  autoUpdater.on('checking-for-update', () => {
+    if (mainWindow) mainWindow.webContents.send('update-checking');
+  });
 
   autoUpdater.on('update-available', (info) => {
     if (mainWindow) mainWindow.webContents.send('update-available', info.version);
+  });
+
+  autoUpdater.on('update-not-available', (info) => {
+    if (mainWindow) mainWindow.webContents.send('update-not-available', info.version);
   });
 
   autoUpdater.on('download-progress', (progress) => {
@@ -109,6 +122,10 @@ app.whenReady().then(() => {
 
   autoUpdater.on('update-downloaded', () => {
     if (mainWindow) mainWindow.webContents.send('update-downloaded');
+  });
+
+  autoUpdater.on('error', (err) => {
+    if (mainWindow) mainWindow.webContents.send('update-error', err.message);
   });
 });
 
