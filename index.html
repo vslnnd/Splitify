@@ -331,7 +331,7 @@
      SETTINGS TAB
   ══════════════════════════════════ */
   #settings-panel {
-    flex: 1; overflow-y: auto; padding: 10px 16px 20px;
+    flex: 1; overflow-y: auto; overflow-x: hidden; padding: 10px 16px 20px;
     display: flex; flex-direction: column; gap: 6px;
   }
 
@@ -348,14 +348,15 @@
   }
 
   .settings-row {
-    display: flex; align-items: center; gap: 12px;
-    padding: 12px 14px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 10px;
+    padding: 11px 14px; border-bottom: 1px solid var(--border);
+    min-width: 0; overflow: hidden;
   }
   .settings-row:last-child { border-bottom: none; }
 
-  .settings-row-info { flex: 1; min-width: 0; }
-  .settings-row-label { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 2px; }
-  .settings-row-sub { font-size: 11px; font-weight: 400; color: var(--text3); }
+  .settings-row-info { flex: 1; min-width: 0; overflow: hidden; }
+  .settings-row-label { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .settings-row-sub { font-size: 11px; font-weight: 400; color: var(--text3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
   /* Toggle switch */
   .toggle { position: relative; width: 42px; height: 24px; flex-shrink: 0; }
@@ -575,7 +576,7 @@
             <div class="settings-row-label">Periodic check interval</div>
             <div class="settings-row-sub">How often to check while app is open</div>
           </div>
-          <div class="select-wrap" style="width:130px">
+          <div class="select-wrap" style="width:130px;flex-shrink:0">
             <select class="select" id="setting-interval" style="font-size:12px">
               <option value="1">Every hour</option>
               <option value="2">Every 2 hours</option>
@@ -617,12 +618,40 @@
             <div class="settings-row-label">Favorite Profile</div>
             <div class="settings-row-sub">Auto-selected when you open a file</div>
           </div>
-          <div class="select-wrap" style="width:160px">
+          <div class="select-wrap" style="width:150px;flex-shrink:0">
             <select class="select" id="setting-fav-profile" style="font-size:12px">
               <option value="">None</option>
             </select>
           </div>
         </div>
+      </div>
+
+      <!-- Import / Export Profiles -->
+      <div class="settings-section">
+        <div class="settings-section-title">Profiles — Import / Export</div>
+
+        <div class="settings-row">
+          <div class="settings-row-info">
+            <div class="settings-row-label">Export All Profiles</div>
+            <div class="settings-row-sub">Save all profiles to a .json backup file</div>
+          </div>
+          <button class="btn btn-accent" id="export-profiles-btn" style="flex-shrink:0">Export ↓</button>
+        </div>
+
+        <div class="settings-row">
+          <div class="settings-row-info">
+            <div class="settings-row-label">Import Profiles</div>
+            <div class="settings-row-sub">Load profiles from a .json backup file</div>
+          </div>
+          <div style="display:flex;gap:6px;flex-shrink:0">
+            <select class="select" id="import-mode" style="width:110px;font-size:11px">
+              <option value="merge">Merge</option>
+              <option value="replace">Replace all</option>
+            </select>
+            <button class="btn btn-accent" id="import-profiles-btn">Import ↑</button>
+          </div>
+        </div>
+        <input type="file" id="import-profiles-input" accept=".json" style="display:none">
       </div>
 
       <!-- Feedback section -->
@@ -1529,6 +1558,61 @@ if (window.splitify && window.splitify.onAppVersion) {
 
 // Init settings after profiles load
 loadAndApplySettings();
+
+
+// ═══════════════════════════════════════════
+//  PROFILES IMPORT / EXPORT
+// ═══════════════════════════════════════════
+document.getElementById('export-profiles-btn').addEventListener('click', async () => {
+  const data = JSON.stringify(profiles, null, 2);
+  const blob = new Blob([data], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const date = new Date().toISOString().slice(0,10).replace(/-/g,'');
+  a.href = url;
+  a.download = `splitify_profiles_${date}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+});
+
+document.getElementById('import-profiles-btn').addEventListener('click', () => {
+  document.getElementById('import-profiles-input').click();
+});
+
+document.getElementById('import-profiles-input').addEventListener('change', async function() {
+  const file = this.files[0];
+  if (!file) return;
+  const mode = document.getElementById('import-mode').value;
+
+  try {
+    const text = await file.text();
+    const imported = JSON.parse(text);
+    if (!Array.isArray(imported)) { alert('Invalid profiles file.'); return; }
+
+    if (mode === 'replace') {
+      if (!confirm(`Replace all ${profiles.length} existing profiles with ${imported.length} imported profiles?`)) return;
+      profiles = imported;
+    } else {
+      // Merge: skip profiles with same name
+      let added = 0;
+      imported.forEach(p => {
+        if (!profiles.find(x => x.name === p.name)) {
+          profiles.push({ ...p, id: 'p_' + Date.now() + '_' + Math.random().toString(36).substr(2,4) });
+          added++;
+        }
+      });
+      alert(`Imported ${added} new profiles (${imported.length - added} skipped — name already exists).`);
+    }
+
+    window.splitify.saveProfiles(profiles);
+    renderProfileList();
+    populateProfileSelect();
+    populateFavProfileSelect();
+    this.value = '';
+  } catch(e) {
+    alert('Failed to read file: ' + e.message);
+  }
+});
 
 </script>
 </body>
