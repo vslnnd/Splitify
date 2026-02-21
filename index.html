@@ -345,7 +345,7 @@
       </div>
       <div>
         <div class="logo-name">Splitify</div>
-        <div class="logo-version">v1.0.0</div>
+        <div class="logo-version" id="app-version">v1.0.0</div>
       </div>
     </div>
   </div>
@@ -1135,6 +1135,12 @@ document.getElementById('modal-import').addEventListener('click', () => {
 // ═══════════════════════════════════════════
 //  AUTO-UPDATER
 // ═══════════════════════════════════════════
+if (window.splitify && window.splitify.onAppVersion) {
+  window.splitify.onAppVersion(v => {
+    document.getElementById('app-version').textContent = 'v' + v;
+  });
+}
+
 if (window.splitify && window.splitify.onUpdateAvailable) {
   window.splitify.onUpdateAvailable(version => {
     document.getElementById('ub-text').textContent = `v${version} available — downloading...`;

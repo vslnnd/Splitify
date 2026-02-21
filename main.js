@@ -84,6 +84,9 @@ function createWindow() {
 
   mainWindow.loadFile('index.html');
   mainWindow.setMenu(null);
+  mainWindow.webContents.on('did-finish-load', () => {
+    mainWindow.webContents.send('app-version', app.getVersion());
+  });
 }
 
 app.whenReady().then(() => {

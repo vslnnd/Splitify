@@ -15,5 +15,6 @@ contextBridge.exposeInMainWorld('splitify', {
   installUpdate: () => ipcRenderer.invoke('install-update'),
   onUpdateAvailable: (cb) => ipcRenderer.on('update-available', (_, version) => cb(version)),
   onUpdateProgress: (cb) => ipcRenderer.on('update-progress', (_, percent) => cb(percent)),
-  onUpdateDownloaded: (cb) => ipcRenderer.on('update-downloaded', () => cb())
+  onUpdateDownloaded: (cb) => ipcRenderer.on('update-downloaded', () => cb()),
+  onAppVersion: (cb) => ipcRenderer.on('app-version', (_, v) => cb(v))
 });
