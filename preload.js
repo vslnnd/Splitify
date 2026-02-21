@@ -1,11 +1,12 @@
-const { contextBridge, ipcRenderer } = require('electron');
+const { contextBridge, ipcRenderer, webUtils } = require('electron');
 
 contextBridge.exposeInMainWorld('splitify', {
   // Core
   getProfiles: () => ipcRenderer.invoke('get-profiles'),
   saveProfiles: (profiles) => ipcRenderer.invoke('save-profiles', profiles),
-  pickFile: () => ipcRenderer.invoke('pick-file'),
+  pickFiles: () => ipcRenderer.invoke('pick-files'),
   pickFolder: () => ipcRenderer.invoke('pick-folder'),
+  getFilePath: (file) => webUtils.getPathForFile(file),
   readFileColumns: (filePath) => ipcRenderer.invoke('read-file-columns', filePath),
   splitFile: (opts) => ipcRenderer.invoke('split-file', opts),
   openFolder: (folderPath) => ipcRenderer.invoke('open-folder', folderPath),

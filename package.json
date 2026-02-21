@@ -1,12 +1,13 @@
 {
   "name": "splitify",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Excel file splitter with profile management",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
     "electron:build": "electron-builder --win --x64 --publish always",
-    "electron:build:local": "electron-builder --win --x64 --publish never"
+    "electron:build:local": "electron-builder --win --x64 --publish never",
+    "release": "node release.js"
   },
   "build": {
     "appId": "com.splitify.app",

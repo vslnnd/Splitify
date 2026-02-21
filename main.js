@@ -123,16 +123,16 @@ ipcMain.handle('get-profiles', () => loadProfiles());
 
 ipcMain.handle('save-profiles', (_, profiles) => saveProfiles(profiles));
 
-ipcMain.handle('pick-file', async () => {
+ipcMain.handle('pick-files', async () => {
   const result = await dialog.showOpenDialog(mainWindow, {
-    title: 'Select Excel File',
+    title: 'Select Excel Files',
     filters: [
       { name: 'Excel Files', extensions: ['xlsx', 'xls', 'csv'] },
       { name: 'All Files', extensions: ['*'] }
     ],
-    properties: ['openFile']
+    properties: ['openFile', 'multiSelections']
   });
-  return result.canceled ? null : result.filePaths[0];
+  return result.canceled ? [] : result.filePaths;
 });
 
 ipcMain.handle('pick-folder', async () => {
