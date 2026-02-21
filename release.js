@@ -49,9 +49,49 @@ rl.question('New version (e.g. 1.1.0): ', (version) => {
       execSync('npm run electron:build', { stdio: 'inherit' });
 
       console.log(`\n✅ v${version} released successfully!`);
+
+      // 6. Clean up old installers from dist/ — only after new one confirmed present
+      cleanupDist(version);
+
     } catch (err) {
       console.error('\n❌ Release failed:', err.message);
       process.exit(1);
     }
   });
 });
+
+function cleanupDist(newVersion) {
+  const distDir = path.join(__dirname, 'dist');
+  if (!fs.existsSync(distDir)) return;
+
+  const newExe      = `Splitify Setup ${newVersion}.exe`;
+  const newBlockmap = `Splitify Setup ${newVersion}.exe.blockmap`;
+
+  // Safety check: only clean if the new installer actually exists
+  if (!fs.existsSync(path.join(distDir, newExe))) {
+    console.log('\n⚠  New installer not found in dist/ — skipping cleanup.');
+    return;
+  }
+
+  let deleted = 0;
+  fs.readdirSync(distDir).forEach(file => {
+    const isOldExe      = file.endsWith('.exe')          && file.startsWith('Splitify Setup') && file !== newExe;
+    const isOldBlockmap = file.endsWith('.exe.blockmap') && file.startsWith('Splitify Setup') && file !== newBlockmap;
+
+    if (isOldExe || isOldBlockmap) {
+      try {
+        fs.unlinkSync(path.join(distDir, file));
+        console.log(`🗑  Removed: ${file}`);
+        deleted++;
+      } catch (e) {
+        console.warn(`⚠  Could not remove ${file}: ${e.message}`);
+      }
+    }
+  });
+
+  if (deleted > 0) {
+    console.log(`\n✓ Cleaned up ${deleted} old installer file${deleted !== 1 ? 's' : ''} from dist/`);
+  } else {
+    console.log('\n✓ dist/ already clean — no old installers to remove');
+  }
+}
