@@ -344,8 +344,11 @@
     background: var(--bg2);
     border: 1px solid var(--border);
     border-radius: 8px;
-    overflow: hidden;
+    overflow: visible;
     width: 100%;
+  }
+  .settings-section-title:first-child {
+    border-radius: 8px 8px 0 0;
   }
 
   .settings-section-title {
@@ -366,6 +369,8 @@
     border-bottom: 1px solid var(--border);
     width: 100%;
     box-sizing: border-box;
+    min-height: 48px;
+    flex-wrap: wrap;
   }
   .settings-row:last-child { border-bottom: none; }
 
@@ -387,6 +392,7 @@
     display: flex;
     align-items: center;
     gap: 6px;
+    overflow: visible;
   }
 
   /* Toggle switch */
