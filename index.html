@@ -1284,6 +1284,31 @@
       --accent2: #1e6e12;
       --red-dim: rgba(200, 40, 40, 0.1);
     }
+
+  /* ══ History Tab ══ */
+  #history-panel { flex:1; display:flex; flex-direction:column; overflow:hidden; }
+  .history-toolbar { padding:10px 16px 8px; display:flex; align-items:center; border-bottom:1px solid var(--border); flex-shrink:0; }
+  #history-list { flex:1; overflow-y:auto; padding:8px 12px 12px; display:flex; flex-direction:column; gap:8px; }
+  .history-item { background:var(--bg2); border:1px solid var(--border); border-radius:8px; overflow:hidden; }
+  .history-item-header { display:flex; align-items:center; gap:10px; padding:10px 12px; cursor:pointer; }
+  .history-item-header:hover { background:var(--bg3); }
+  .history-chevron { font-size:10px; color:var(--text3); transition:transform var(--tr); flex-shrink:0; }
+  .history-item.open .history-chevron { transform:rotate(90deg); }
+  .history-item-title { flex:1; min-width:0; }
+  .history-item-name { font-size:12px; font-weight:700; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .history-item-meta { font-size:10px; color:var(--text3); font-weight:400; margin-top:1px; }
+  .history-item-body { display:none; padding:0 12px 10px; }
+  .history-item.open .history-item-body { display:block; }
+  .history-files { display:flex; flex-wrap:wrap; gap:4px; margin-bottom:8px; }
+  .history-file-pill { font-size:10px; font-weight:500; color:var(--text2); background:var(--bg3); border:1px solid var(--border); border-radius:4px; padding:2px 7px; }
+
+  /* ══ Changelog entries ══ */
+  .changelog-entry { margin-bottom:18px; padding-bottom:18px; border-bottom:1px solid var(--border); }
+  .changelog-entry:last-child { border-bottom:none; margin-bottom:0; padding-bottom:0; }
+  .changelog-version { font-size:11px; font-weight:700; color:var(--accent); letter-spacing:0.5px; text-transform:uppercase; margin-bottom:4px; }
+  .changelog-date { font-size:10px; color:var(--text3); margin-bottom:8px; }
+  .changelog-notes { font-size:12px; color:var(--text2); line-height:1.7; font-weight:400; white-space:pre-wrap; }
+
   </style>
 </head>
 
@@ -1310,17 +1335,20 @@
           </div>
         </div>
       </div>
+      <button id="changelog-btn" title="Patch Notes" style="margin-left:auto;-webkit-app-region:no-drag;background:none;border:1px solid var(--border2);border-radius:50%;width:26px;height:26px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text3);font-size:13px;font-weight:700;font-family:var(--mono);transition:all var(--tr);flex-shrink:0">?</button>
     </div>
 
     <!-- Update Banner -->
     <div id="update-banner">
       <div style="font-size:14px;flex-shrink:0">↑</div>
       <div style="flex:1;min-width:0">
-        <div class="ub-text" id="ub-text">Update available</div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <div class="ub-text" id="ub-text">Update available</div>
+          <button id="ub-notes-toggle" style="display:none;background:none;border:none;cursor:pointer;font-size:10px;font-weight:700;color:var(--accent2);font-family:var(--mono);padding:0;letter-spacing:0.5px">WHAT'S NEW ▾</button>
+        </div>
+        <div id="ub-notes" style="display:none;margin-top:5px;font-size:11px;color:var(--text2);line-height:1.6;font-weight:400;padding:6px 8px;background:rgba(184,242,160,0.05);border-radius:4px;border:1px solid rgba(184,242,160,0.1)"></div>
         <div id="ub-progress-wrap" style="display:none">
-          <div class="ub-progress">
-            <div class="ub-bar" id="ub-bar"></div>
-          </div>
+          <div class="ub-progress"><div class="ub-bar" id="ub-bar"></div></div>
         </div>
       </div>
       <button class="btn btn-accent" id="ub-btn" style="display:none">Restart & Install</button>
@@ -1331,6 +1359,7 @@
       <div class="tab active" data-tab="split">⚡ Split File</div>
       <div class="tab" data-tab="profiles">◈ Profiles</div>
       <div class="tab" data-tab="settings">⚙ Settings</div>
+      <div class="tab" data-tab="history">◷ History</div>
     </div>
 
     <!-- ════════════ SPLIT TAB ════════════ -->
@@ -1505,6 +1534,20 @@
           </div>
         </div>
 
+<!-- Help section -->
+        <div class="settings-section">
+          <div class="settings-section-title">Help</div>
+          <div class="settings-row">
+            <div class="settings-row-info">
+              <div class="settings-row-label">Show Tutorial Again</div>
+              <div class="settings-row-sub">Replay the first-time walkthrough</div>
+            </div>
+            <div class="settings-row-right">
+              <button class="btn btn-ghost" id="show-tutorial-btn">Show Tutorial</button>
+            </div>
+          </div>
+        </div>
+
 <!-- Import / Export Profiles -->
         <div class="settings-section">
           <div class="settings-section-title">Profiles — Import / Export</div>
@@ -1575,6 +1618,65 @@
       </div>
     </div>
 
+  </div>
+
+  <!-- ════════════ HISTORY TAB ════════════ -->
+  <div id="tab-history" class="tab-panel">
+    <div id="history-panel">
+      <div class="history-toolbar">
+        <span id="history-count" style="font-size:11px;color:var(--text3);font-weight:600"></span>
+        <button class="btn btn-ghost" id="clear-history-btn" style="font-size:10px;padding:4px 9px;margin-left:auto">Clear All</button>
+      </div>
+      <div id="history-list"></div>
+      <div id="history-empty" style="display:none">
+        <div class="empty-state">
+          <div class="es-icon">◷</div>
+          <div class="es-text">No split history yet.<br>Your completed splits will appear here.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════ TUTORIAL OVERLAY ════ -->
+  <div id="tutorial-overlay" style="display:none;position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,0.75);backdrop-filter:blur(2px)">
+    <div id="tutorial-spotlight" style="display:none;position:fixed;border-radius:8px;box-shadow:0 0 0 9999px rgba(0,0,0,0.75);border:2px solid var(--accent);transition:all 0.3s ease;pointer-events:none;z-index:10001"></div>
+    <div id="tutorial-card" style="position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--bg2);border:1px solid var(--accent);border-radius:10px;padding:16px 18px;width:320px;box-shadow:0 8px 32px rgba(0,0,0,0.5);z-index:10002">
+      <div id="tutorial-step-indicator" style="font-size:10px;color:var(--text3);font-weight:700;letter-spacing:0.5px;margin-bottom:6px;text-transform:uppercase"></div>
+      <div id="tutorial-title" style="font-size:14px;font-weight:700;color:var(--accent);margin-bottom:6px"></div>
+      <div id="tutorial-body" style="font-size:12px;color:var(--text2);line-height:1.6;font-weight:400;margin-bottom:14px"></div>
+      <div id="tutorial-footer" style="display:flex;justify-content:space-between;align-items:center">
+        <button class="btn btn-ghost" id="tutorial-skip-btn" style="font-size:11px">Skip Tutorial</button>
+        <button class="btn btn-accent" id="tutorial-next-btn" style="font-size:11px">Next →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════ WHAT'S NEW MODAL ════ -->
+  <div id="whatsnew-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);display:none;align-items:center;justify-content:center;z-index:9000;backdrop-filter:blur(4px)">
+    <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:10px;width:90%;max-width:420px;display:flex;flex-direction:column;max-height:80vh;box-shadow:0 24px 60px rgba(0,0,0,0.5)">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--border);font-size:13px;font-weight:700;flex-shrink:0">
+        <span>🎉 What's New</span>
+        <button id="whatsnew-close" style="background:none;border:none;cursor:pointer;color:var(--text3);font-size:14px;padding:2px 6px;border-radius:4px">✕</button>
+      </div>
+      <div style="flex:1;overflow-y:auto;padding:16px">
+        <div id="whatsnew-version" style="font-size:11px;font-weight:700;color:var(--accent);margin-bottom:10px;letter-spacing:0.5px;text-transform:uppercase"></div>
+        <div id="whatsnew-notes" style="font-size:12px;color:var(--text2);line-height:1.7;font-weight:400;white-space:pre-wrap"></div>
+      </div>
+      <div style="padding:12px 16px;border-top:1px solid var(--border);flex-shrink:0">
+        <button class="btn btn-accent" id="whatsnew-close-btn" style="width:100%;padding:10px">Got it!</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════ CHANGELOG MODAL ════ -->
+  <div id="changelog-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);align-items:center;justify-content:center;z-index:9000;backdrop-filter:blur(4px)">
+    <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:10px;width:90%;max-width:480px;display:flex;flex-direction:column;max-height:80vh;box-shadow:0 24px 60px rgba(0,0,0,0.5)">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--border);font-size:13px;font-weight:700;flex-shrink:0">
+        <span>📋 Patch Notes</span>
+        <button id="changelog-close" style="background:none;border:none;cursor:pointer;color:var(--text3);font-size:14px;padding:2px 6px;border-radius:4px">✕</button>
+      </div>
+      <div id="changelog-body" style="flex:1;overflow-y:auto;padding:16px;max-height:420px"></div>
+    </div>
   </div>
 
   <!-- Profile Editor Modal -->
@@ -2105,6 +2207,25 @@
       isProcessing = false;
       icon.textContent = '▶';
       text.textContent = 'SPLIT SELECTED FILES';
+
+      // Save to history
+      const doneItems = queue.filter(q => q.status === 'done');
+      if (doneItems.length > 0) {
+        const profileId   = document.getElementById('profile-select').value;
+        const profileName = profiles.find(p => p.id === profileId)?.name || '— no profile —';
+        const outputDir   = document.getElementById('output-path-display').textContent === 'Same folder as each input file'
+          ? doneItems[0].path.substring(0, doneItems[0].path.replace(/\\/g, '/').lastIndexOf('/'))
+          : document.getElementById('output-path-display').textContent;
+        const entry = {
+          id: 'h_' + Date.now(),
+          timestamp: new Date().toISOString(),
+          profileName,
+          files: doneItems.map(q => ({ name: q.name, path: q.path, rows: q.totalRows || 0 })),
+          outputDir,
+          totalCreated
+        };
+        window.splitify.addHistoryEntry(entry).then(() => renderHistory());
+      }
       updateSplitBtn();
       updateSelectAll();
     }
@@ -2288,10 +2409,23 @@
         console.log('[updater] checking for updates...');
       });
 
-      window.splitify.onUpdateAvailable(version => {
+      window.splitify.onUpdateAvailable(data => {
+        const version = typeof data === 'object' ? data.version : data;
+        const notes   = typeof data === 'object' ? data.notes   : null;
         console.log('[updater] update available:', version);
         document.getElementById('ub-text').textContent = `v${version} available — downloading...`;
         document.getElementById('update-banner').classList.add('visible');
+        if (notes) {
+          const notesEl  = document.getElementById('ub-notes');
+          const toggleEl = document.getElementById('ub-notes-toggle');
+          notesEl.textContent = notes;
+          toggleEl.style.display = '';
+          toggleEl.addEventListener('click', () => {
+            const open = notesEl.style.display !== 'none';
+            notesEl.style.display = open ? 'none' : '';
+            toggleEl.textContent = open ? "WHAT'S NEW ▾" : "WHAT'S NEW ▴";
+          });
+        }
       });
 
       window.splitify.onUpdateNotAvailable && window.splitify.onUpdateNotAvailable(version => {
@@ -2535,6 +2669,246 @@
         alert('Failed to read file: ' + e.message);
       }
     });
+
+
+    // ═══════════════════════════════════════════
+    //  HISTORY
+    // ═══════════════════════════════════════════
+    async function renderHistory() {
+      const history = await window.splitify.getHistory();
+      const list = document.getElementById('history-list');
+      const empty = document.getElementById('history-empty');
+      const countEl = document.getElementById('history-count');
+
+      if (!history || history.length === 0) {
+        list.innerHTML = '';
+        empty.style.display = '';
+        countEl.textContent = 'No history';
+        return;
+      }
+
+      empty.style.display = 'none';
+      countEl.textContent = `${history.length} split${history.length !== 1 ? 's' : ''}`;
+
+      list.innerHTML = history.map(entry => {
+        const d = new Date(entry.timestamp);
+        const dateStr = d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        const fileNames = (entry.files || []).map(f => f.name).join(', ');
+        const firstFile = entry.files && entry.files[0] ? entry.files[0].name : 'Unknown';
+        return `<div class="history-item" data-id="${entry.id}">
+          <div class="history-item-header" onclick="toggleHistory('${entry.id}')">
+            <span class="history-chevron">▶</span>
+            <div class="history-item-title">
+              <div class="history-item-name">${escHtml(firstFile)}${entry.files && entry.files.length > 1 ? ` +${entry.files.length - 1} more` : ''}</div>
+              <div class="history-item-meta">${dateStr} · ${escHtml(entry.profileName)} · ${entry.totalCreated || 0} output files</div>
+            </div>
+          </div>
+          <div class="history-item-body">
+            <div class="history-files">${(entry.files || []).map(f => `<span class="history-file-pill">${escHtml(f.name)}</span>`).join('')}</div>
+            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+              <button class="btn btn-accent history-rerun-btn" onclick="rerunHistory('${entry.id}')">▶ Re-run</button>
+              <button class="btn btn-ghost history-rerun-btn" onclick="openHistoryFolder('${entry.id}')">Open Folder ↗</button>
+              <span style="font-size:10px;color:var(--text3);margin-left:auto">${escHtml(entry.outputDir || '')}</span>
+            </div>
+          </div>
+        </div>`;
+      }).join('');
+    }
+
+    function toggleHistory(id) {
+      const el = document.querySelector(`.history-item[data-id="${id}"]`);
+      if (el) el.classList.toggle('open');
+    }
+
+    async function openHistoryFolder(id) {
+      const history = await window.splitify.getHistory();
+      const entry = history.find(h => h.id === id);
+      if (entry && entry.outputDir) window.splitify.openFolder(entry.outputDir);
+    }
+
+    async function rerunHistory(id) {
+      const history = await window.splitify.getHistory();
+      const entry = history.find(h => h.id === id);
+      if (!entry) return;
+
+      // Switch to Split tab
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+      document.querySelector('[data-tab="split"]').classList.add('active');
+      document.getElementById('tab-split').classList.add('active');
+
+      // Add files back to queue
+      for (const f of (entry.files || [])) {
+        await addToQueue(f.path);
+      }
+
+      // Re-select profile
+      const prof = profiles.find(p => p.name === entry.profileName);
+      if (prof) {
+        document.getElementById('profile-select').value = prof.id;
+        recomputeAllPreviews();
+      }
+    }
+
+    document.getElementById('clear-history-btn').addEventListener('click', async () => {
+      if (!confirm('Clear all split history?')) return;
+      await window.splitify.clearHistory();
+      renderHistory();
+    });
+
+    // ═══════════════════════════════════════════
+    //  TUTORIAL
+    // ═══════════════════════════════════════════
+    const TUTORIAL_STEPS = [
+      {
+        title: 'Drop your files',
+        body: 'Drag and drop one or more Excel files onto the drop zone, or click it to browse. You can add multiple files at once.',
+        targetId: 'drop-zone',
+        tab: 'split'
+      },
+      {
+        title: 'Pick a split column',
+        body: 'After uploading, choose which column to split by — usually "Cost Center Ref." The app will auto-detect it if it finds a matching column name.',
+        targetId: 'section-settings',
+        tab: 'split',
+        showQueue: true
+      },
+      {
+        title: 'Choose a profile',
+        body: 'Profiles define how values map to output files. If your file has a "Client" column matching a profile name, it's auto-selected. Otherwise pick one manually.',
+        targetId: 'section-settings',
+        tab: 'split',
+        showQueue: true
+      },
+      {
+        title: 'Split!',
+        body: 'Hit the SPLIT button at the bottom. Each file in the queue gets split into separate output files per region. Results appear in the log below.',
+        targetId: 'split-bottom',
+        tab: 'split',
+        showQueue: true
+      }
+    ];
+
+    let tutorialStep = 0;
+
+    function startTutorial() {
+      tutorialStep = 0;
+      document.getElementById('tutorial-overlay').style.display = '';
+      showTutorialStep(tutorialStep);
+    }
+
+    function showTutorialStep(step) {
+      const s = TUTORIAL_STEPS[step];
+
+      // Switch tab if needed
+      if (s.tab) {
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+        document.querySelector(`[data-tab="${s.tab}"]`).classList.add('active');
+        document.getElementById(`tab-${s.tab}`).classList.add('active');
+      }
+
+      document.getElementById('tutorial-step-indicator').textContent = `Step ${step + 1} of ${TUTORIAL_STEPS.length}`;
+      document.getElementById('tutorial-title').textContent = s.title;
+      document.getElementById('tutorial-body').textContent = s.body;
+      document.getElementById('tutorial-next-btn').textContent = step === TUTORIAL_STEPS.length - 1 ? 'Finish ✓' : 'Next →';
+
+      // Position spotlight on target
+      setTimeout(() => {
+        const target = document.getElementById(s.targetId);
+        if (target) {
+          const r = target.getBoundingClientRect();
+          const pad = 8;
+          const spot = document.getElementById('tutorial-spotlight');
+          spot.style.left   = (r.left - pad) + 'px';
+          spot.style.top    = (r.top - pad) + 'px';
+          spot.style.width  = (r.width + pad * 2) + 'px';
+          spot.style.height = (r.height + pad * 2) + 'px';
+          spot.style.display = '';
+        }
+      }, 50);
+    }
+
+    function closeTutorial() {
+      document.getElementById('tutorial-overlay').style.display = 'none';
+      document.getElementById('tutorial-spotlight').style.display = 'none';
+      window.splitify.markTutorialShown();
+    }
+
+    document.getElementById('tutorial-next-btn').addEventListener('click', () => {
+      if (tutorialStep < TUTORIAL_STEPS.length - 1) {
+        tutorialStep++;
+        showTutorialStep(tutorialStep);
+      } else {
+        closeTutorial();
+      }
+    });
+    document.getElementById('tutorial-skip-btn').addEventListener('click', closeTutorial);
+
+    document.getElementById('show-tutorial-btn').addEventListener('click', startTutorial);
+
+    if (window.splitify && window.splitify.onShowTutorial) {
+      window.splitify.onShowTutorial(() => startTutorial());
+    }
+
+    // ═══════════════════════════════════════════
+    //  WHAT'S NEW MODAL (first launch after update)
+    // ═══════════════════════════════════════════
+    if (window.splitify && window.splitify.onFirstLaunchAfterUpdate) {
+      window.splitify.onFirstLaunchAfterUpdate(async (version) => {
+        // Fetch notes from GitHub releases API
+        try {
+          const resp = await fetch(`https://api.github.com/repos/vslnnd/Splitify/releases/tags/v${version}`);
+          const data = await resp.json();
+          const notes = data.body || 'No patch notes available for this version.';
+          document.getElementById('whatsnew-version').textContent = `Version ${version}`;
+          document.getElementById('whatsnew-notes').textContent = notes;
+          document.getElementById('whatsnew-overlay').style.display = 'flex';
+        } catch(e) {
+          // If can't fetch, show basic modal
+          document.getElementById('whatsnew-version').textContent = `Version ${version}`;
+          document.getElementById('whatsnew-notes').textContent = 'Updated to the latest version.';
+          document.getElementById('whatsnew-overlay').style.display = 'flex';
+        }
+      });
+    }
+    document.getElementById('whatsnew-close').addEventListener('click',     () => { document.getElementById('whatsnew-overlay').style.display = 'none'; });
+    document.getElementById('whatsnew-close-btn').addEventListener('click', () => { document.getElementById('whatsnew-overlay').style.display = 'none'; });
+
+    // ═══════════════════════════════════════════
+    //  CHANGELOG MODAL (? button)
+    // ═══════════════════════════════════════════
+    document.getElementById('changelog-btn').addEventListener('click', async () => {
+      document.getElementById('changelog-overlay').style.display = 'flex';
+      const body = document.getElementById('changelog-body');
+      body.innerHTML = '<div id="changelog-loading" style="text-align:center;padding:24px;color:var(--text3);font-size:12px">Loading release history...</div>';
+      try {
+        const resp = await fetch('https://api.github.com/repos/vslnnd/Splitify/releases');
+        const releases = await resp.json();
+        if (!Array.isArray(releases) || releases.length === 0) {
+          body.innerHTML = '<div style="padding:16px;font-size:12px;color:var(--text3);text-align:center">No releases found.</div>';
+          return;
+        }
+        body.innerHTML = releases.map(r => {
+          const d = new Date(r.published_at);
+          const dateStr = d.toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
+          const notes = r.body ? escHtml(r.body) : '<span style="color:var(--text3);font-style:italic">No notes for this release</span>';
+          return `<div class="changelog-entry">
+            <div class="changelog-version">${escHtml(r.tag_name)}</div>
+            <div class="changelog-date">${dateStr}</div>
+            <div class="changelog-notes">${notes}</div>
+          </div>`;
+        }).join('');
+      } catch(e) {
+        body.innerHTML = '<div style="padding:16px;font-size:12px;color:var(--red)">Could not load releases. Check your internet connection.</div>';
+      }
+    });
+    document.getElementById('changelog-close').addEventListener('click', () => { document.getElementById('changelog-overlay').style.display = 'none'; });
+
+    // ═══════════════════════════════════════════
+    //  INIT — load history on startup
+    // ═══════════════════════════════════════════
+    renderHistory();
 
   </script>
 </body>
