@@ -10,6 +10,8 @@ contextBridge.exposeInMainWorld('splitify', {
   readFileColumns: (filePath) => ipcRenderer.invoke('read-file-columns', filePath),
   splitFile: (opts) => ipcRenderer.invoke('split-file', opts),
   openFolder: (folderPath) => ipcRenderer.invoke('open-folder', folderPath),
+  openFile: (filePath) => ipcRenderer.invoke('open-file', filePath),
+  showMessageBox: (options) => ipcRenderer.invoke('show-message-box', options),
 
   // Auto-updater
   installUpdate: () => ipcRenderer.invoke('install-update'),

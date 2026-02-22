@@ -198,10 +198,23 @@
       flex: 1;
       overflow: hidden;
       flex-direction: column;
+      animation: fadeIn 0.15s ease-out;
     }
 
     .tab-panel.active {
       display: flex;
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(4px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
     }
 
     /* ── Buttons ── */
@@ -298,6 +311,35 @@
     .input::placeholder {
       color: var(--text3);
       font-weight: 400;
+    }
+
+    .invalid-shake {
+      animation: shake 0.4s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+      border-color: var(--red) !important;
+    }
+
+    @keyframes shake {
+
+      10%,
+      90% {
+        transform: translate3d(-1px, 0, 0);
+      }
+
+      20%,
+      80% {
+        transform: translate3d(2px, 0, 0);
+      }
+
+      30%,
+      50%,
+      70% {
+        transform: translate3d(-4px, 0, 0);
+      }
+
+      40%,
+      60% {
+        transform: translate3d(4px, 0, 0);
+      }
     }
 
     .select-wrap {
@@ -498,7 +540,20 @@
       border: 1px solid var(--border);
       border-radius: var(--radius);
       overflow: hidden;
-      transition: border-color var(--tr);
+      transition: all var(--tr);
+      animation: slideIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    @keyframes slideIn {
+      from {
+        opacity: 0;
+        transform: translateX(-10px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateX(0);
+      }
     }
 
     .queue-item.selected {
@@ -818,6 +873,7 @@
       cursor: pointer;
       transition: all var(--tr);
       gap: 10px;
+      animation: slideIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
     }
 
     .profile-item:hover {
@@ -917,6 +973,14 @@
       flex-direction: column;
       overflow: hidden;
       box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6);
+      transform: scale(0.95);
+      opacity: 0;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    #editor-modal-overlay.open #editor-modal {
+      transform: scale(1);
+      opacity: 1;
     }
 
     .em-header {
@@ -1081,6 +1145,15 @@
       display: flex;
       flex-direction: column;
       overflow: hidden;
+      transform: scale(0.95);
+      opacity: 0;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6);
+    }
+
+    #modal-overlay.open #modal {
+      transform: scale(1);
+      opacity: 1;
     }
 
     .modal-header {
@@ -1331,6 +1404,8 @@
       border-radius: 7px;
       overflow: hidden;
       flex-shrink: 0;
+      animation: fadeIn 0.2s ease-out;
+      transition: background var(--tr), border-color var(--tr);
     }
 
     .hi-header {
@@ -1405,6 +1480,14 @@
       overflow: hidden;
       text-overflow: ellipsis;
       max-width: 200px;
+      cursor: pointer;
+      transition: all var(--tr);
+    }
+
+    .hi-file:hover {
+      color: var(--text);
+      background: var(--bg4);
+      border-color: var(--border2);
     }
 
     .hi-actions {
@@ -2386,7 +2469,10 @@
     }
 
     document.getElementById('add-param-btn').addEventListener('click', addParam);
-    document.getElementById('new-param-value').addEventListener('keydown', e => { if (e.key === 'Enter') addParam(); });
+    const handleEnter = e => { if (e.key === 'Enter') addParam(); };
+    document.getElementById('new-param-value').addEventListener('keydown', handleEnter);
+    document.getElementById('new-param-label').addEventListener('keydown', handleEnter);
+    document.getElementById('new-param-payable').addEventListener('keydown', handleEnter);
 
     function addParam() {
       const v = document.getElementById('new-param-value');
@@ -2415,10 +2501,22 @@
     }
 
     document.getElementById('editor-delete-btn').addEventListener('click', () => { if (editingProfileId) confirmDeleteProfile(editingProfileId); });
-    function confirmDeleteProfile(id, e) {
+    async function confirmDeleteProfile(id, e) {
       if (e) e.stopPropagation();
       const p = profiles.find(x => x.id === id);
-      if (!p || !confirm(`Delete profile "${p.name}"?`)) return;
+      if (!p) return;
+
+      const response = await window.splitify.showMessageBox({
+        type: 'warning',
+        buttons: ['Cancel', 'Delete Profile'],
+        defaultId: 1,
+        title: 'Confirm Deletion',
+        message: `Are you sure you want to delete the profile "${p.name}"?`,
+        detail: 'This action cannot be undone.'
+      });
+
+      if (response !== 1) return;
+
       profiles = profiles.filter(x => x.id !== id);
       window.splitify.saveProfiles(profiles);
       if (editingProfileId === id) closeEditor();
@@ -2602,11 +2700,10 @@
       const btn = document.getElementById('feedback-email-btn');
 
       if (!text) {
-        // Shake the textarea to indicate it's required
-        textEl.style.borderColor = 'var(--red)';
+        textEl.classList.add('invalid-shake');
         textEl.setAttribute('placeholder', 'Please enter your feedback before sending...');
         textEl.focus();
-        setTimeout(() => { textEl.style.borderColor = ''; }, 2000);
+        setTimeout(() => { textEl.classList.remove('invalid-shake'); }, 500);
         return;
       }
 
@@ -2708,10 +2805,20 @@
       try {
         const text = await file.text();
         const imported = JSON.parse(text);
-        if (!Array.isArray(imported)) { alert('Invalid profiles file.'); return; }
+        if (!Array.isArray(imported)) {
+          await window.splitify.showMessageBox({ type: 'error', title: 'Import Error', message: 'Invalid profiles file. Please select a valid JSON backup file.' });
+          return;
+        }
 
         if (mode === 'replace') {
-          if (!confirm(`Replace all ${profiles.length} existing profiles with ${imported.length} imported profiles?`)) return;
+          const res = await window.splitify.showMessageBox({
+            type: 'warning',
+            buttons: ['Cancel', 'Replace All existing Profiles'],
+            title: 'Confirm Replace',
+            message: `Replace all ${profiles.length} existing profiles with ${imported.length} imported profiles?`,
+            detail: 'Your current profiles will be completely overwritten.'
+          });
+          if (res !== 1) { this.value = ''; return; }
           profiles = imported;
         } else {
           // Merge: skip profiles with same name
@@ -2722,7 +2829,12 @@
               added++;
             }
           });
-          alert(`Imported ${added} new profiles (${imported.length - added} skipped — name already exists).`);
+          await window.splitify.showMessageBox({
+            type: 'info',
+            title: 'Import Successful',
+            message: 'Import Complete',
+            detail: `Imported ${added} new profiles (${imported.length - added} skipped — name already exists).`
+          });
         }
 
         window.splitify.saveProfiles(profiles);
@@ -2730,7 +2842,8 @@
         populateProfileSelect();
         this.value = '';
       } catch (e) {
-        alert('Failed to read file: ' + e.message);
+        await window.splitify.showMessageBox({ type: 'error', title: 'Import Failed', message: 'Failed to read file:', detail: e.message });
+        this.value = '';
       }
     });
 
@@ -2793,6 +2906,11 @@
           card.querySelector('[data-rerun]').addEventListener('click', (e) => { e.stopPropagation(); rerunHistory(entry); });
           card.querySelector('[data-openfolder]').addEventListener('click', (e) => { e.stopPropagation(); window.splitify.openFolder(entry.outputDir); });
 
+          // Map click handlers to individual output file pills
+          card.querySelectorAll('.hi-file').forEach(pill => {
+            pill.addEventListener('click', (e) => { e.stopPropagation(); window.splitify.openFile(pill.title); });
+          });
+
           list.appendChild(card);
         } catch (entryErr) {
           console.error('Error rendering history entry:', entry.id, entryErr);
@@ -2824,7 +2942,14 @@
     document.getElementById('refresh-history-btn').addEventListener('click', renderHistory);
 
     document.getElementById('clear-history-btn').addEventListener('click', async () => {
-      if (!confirm('Clear all split history?')) return;
+      const res = await window.splitify.showMessageBox({
+        type: 'warning',
+        buttons: ['Cancel', 'Clear All'],
+        title: 'Confirm',
+        message: 'Clear all split history?',
+        detail: 'This removes the log of previously generated files.'
+      });
+      if (res !== 1) return;
       await window.splitify.clearHistory();
       renderHistory();
     });

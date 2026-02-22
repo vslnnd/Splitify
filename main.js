@@ -4,9 +4,9 @@ const path = require('path');
 const fs = require('fs');
 const XLSX = require('xlsx');
 
-const PROFILES_PATH  = path.join(app.getPath('userData'), 'splitify_profiles.json');
-const SETTINGS_PATH  = path.join(app.getPath('userData'), 'splitify_settings.json');
-const HISTORY_PATH   = path.join(app.getPath('userData'), 'splitify_history.json');
+const PROFILES_PATH = path.join(app.getPath('userData'), 'splitify_profiles.json');
+const SETTINGS_PATH = path.join(app.getPath('userData'), 'splitify_settings.json');
+const HISTORY_PATH = path.join(app.getPath('userData'), 'splitify_history.json');
 
 const DEFAULT_SETTINGS = {
   theme: 'dark',
@@ -20,25 +20,25 @@ function loadSettings() {
     if (fs.existsSync(SETTINGS_PATH)) {
       return { ...DEFAULT_SETTINGS, ...JSON.parse(fs.readFileSync(SETTINGS_PATH, 'utf8')) };
     }
-  } catch(e) {}
+  } catch (e) { }
   return { ...DEFAULT_SETTINGS };
 }
 
 function saveSettings(settings) {
   try { fs.writeFileSync(SETTINGS_PATH, JSON.stringify(settings, null, 2)); return true; }
-  catch(e) { return false; }
+  catch (e) { return false; }
 }
 
 // ─── History Storage ──────────────────────────────────────────────────────────
 function loadHistory() {
   try {
     if (fs.existsSync(HISTORY_PATH)) return JSON.parse(fs.readFileSync(HISTORY_PATH, 'utf8'));
-  } catch(e) {}
+  } catch (e) { }
   return [];
 }
 function saveHistory(history) {
   try { fs.writeFileSync(HISTORY_PATH, JSON.stringify(history, null, 2)); return true; }
-  catch(e) { return false; }
+  catch (e) { return false; }
 }
 
 // ─── Default SElectric Profile ────────────────────────────────────────────────
@@ -48,29 +48,29 @@ const DEFAULT_PROFILES = [
     name: 'SElectric',
     description: 'Schneider Electric cost center profile',
     parameters: [
-      { value: '01',        label: 'FR',     payable: true  },
-      { value: '01|100',    label: 'FR',     payable: true  },
-      { value: '05',        label: 'Eurotherm', payable: true },
-      { value: '06',        label: 'UK',     payable: true  },
-      { value: '07',        label: 'DK',     payable: true  },
-      { value: '08',        label: 'AU',     payable: true  },
-      { value: '30',        label: 'NAM',    payable: true  },
-      { value: '31',        label: 'SOLAR',  payable: true  },
-      { value: '32',        label: 'NAM',    payable: true  },
-      { value: '33',        label: 'NAM',    payable: true  },
-      { value: '34',        label: 'NAM',    payable: true  },
-      { value: '50',        label: 'CN',     payable: true  },
-      { value: '51',        label: 'CN',     payable: true  },
-      { value: '52',        label: 'CN',     payable: true  },
-      { value: '53',        label: 'CN',     payable: true  },
-      { value: '54',        label: 'CN',     payable: true  },
-      { value: '70',        label: 'JP',     payable: true  },
-      { value: '130',       label: 'AU',     payable: true  },
-      { value: '131',       label: '',       payable: false },
-      { value: '132',       label: '',       payable: false },
-      { value: '150',       label: 'CN',     payable: false },
-      { value: 'DEFAULT',   label: '',       payable: false },
-      { value: 'DEFAULT|100', label: '',     payable: false }
+      { value: '01', label: 'FR', payable: true },
+      { value: '01|100', label: 'FR', payable: true },
+      { value: '05', label: 'Eurotherm', payable: true },
+      { value: '06', label: 'UK', payable: true },
+      { value: '07', label: 'DK', payable: true },
+      { value: '08', label: 'AU', payable: true },
+      { value: '30', label: 'NAM', payable: true },
+      { value: '31', label: 'SOLAR', payable: true },
+      { value: '32', label: 'NAM', payable: true },
+      { value: '33', label: 'NAM', payable: true },
+      { value: '34', label: 'NAM', payable: true },
+      { value: '50', label: 'CN', payable: true },
+      { value: '51', label: 'CN', payable: true },
+      { value: '52', label: 'CN', payable: true },
+      { value: '53', label: 'CN', payable: true },
+      { value: '54', label: 'CN', payable: true },
+      { value: '70', label: 'JP', payable: true },
+      { value: '130', label: 'AU', payable: true },
+      { value: '131', label: '', payable: false },
+      { value: '132', label: '', payable: false },
+      { value: '150', label: 'CN', payable: false },
+      { value: 'DEFAULT', label: '', payable: false },
+      { value: 'DEFAULT|100', label: '', payable: false }
     ],
     createdAt: new Date().toISOString()
   }
@@ -83,7 +83,7 @@ function loadProfiles() {
       const data = JSON.parse(fs.readFileSync(PROFILES_PATH, 'utf8'));
       return Array.isArray(data) ? data : DEFAULT_PROFILES;
     }
-  } catch (e) {}
+  } catch (e) { }
   return DEFAULT_PROFILES;
 }
 
@@ -207,6 +207,11 @@ ipcMain.handle('pick-folder', async () => {
     properties: ['openDirectory', 'createDirectory']
   });
   return result.canceled ? null : result.filePaths[0];
+});
+
+ipcMain.handle('show-message-box', async (_, options) => {
+  const result = await dialog.showMessageBox(mainWindow, options);
+  return result.response;
 });
 
 ipcMain.handle('read-file-columns', async (_, filePath) => {
@@ -339,6 +344,10 @@ ipcMain.handle('split-file', async (_, { filePath, columnIndex, parameters, outp
 
 ipcMain.handle('open-folder', (_, folderPath) => {
   shell.openPath(folderPath);
+});
+
+ipcMain.handle('open-file', (_, filePath) => {
+  shell.openPath(filePath);
 });
 
 ipcMain.handle('install-update', () => {
