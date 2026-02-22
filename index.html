@@ -1601,10 +1601,7 @@
     <div id="history-panel">
       <div id="history-toolbar">
         <span id="history-count"></span>
-        <div style="display:flex;gap:6px">
-          <button class="btn" id="refresh-history-btn" style="font-size:10px;padding:4px 10px">↻ Refresh</button>
-          <button class="btn" id="clear-history-btn" style="font-size:10px;padding:4px 10px">Clear All</button>
-        </div>
+        <button class="btn" id="clear-history-btn" style="font-size:10px;padding:4px 10px">Clear All</button>
       </div>
       <div id="history-list"></div>
       <div id="history-empty" style="display:none">
@@ -1716,7 +1713,6 @@
         document.querySelectorAll('.tab-panel').forEach(x => x.classList.remove('active'));
         tab.classList.add('active');
         document.getElementById('tab-' + t).classList.add('active');
-        if (t === 'history') renderHistory();
       });
     });
 
@@ -2596,59 +2592,53 @@
     //  HISTORY
     // ═══════════════════════════════════════════
     async function renderHistory() {
+      const history = await window.splitify.getHistory();
       const list    = document.getElementById('history-list');
       const empty   = document.getElementById('history-empty');
       const countEl = document.getElementById('history-count');
 
       list.innerHTML = '';
-      empty.style.display = 'none';
-      countEl.textContent = '';
 
-      try {
-        const history = await window.splitify.getHistory();
-
-        if (!history || history.length === 0) {
-          empty.style.display = '';
-          return;
-        }
-
-        countEl.textContent = history.length + ' entr' + (history.length === 1 ? 'y' : 'ies');
-
-        history.forEach(entry => {
-          const d = new Date(entry.timestamp);
-          const dateStr = d.toLocaleDateString() + ' · ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-          const firstName = entry.files && entry.files[0] ? entry.files[0].name : 'Unknown';
-          const extraCount = entry.files && entry.files.length > 1 ? ' +' + (entry.files.length - 1) + ' more' : '';
-
-          const card = document.createElement('div');
-          card.className = 'hi';
-          card.dataset.id = entry.id;
-          card.innerHTML = `
-            <div class="hi-header">
-              <span class="hi-chevron">▶</span>
-              <div class="hi-title">
-                <div class="hi-name">${escHtml(firstName)}${escHtml(extraCount)}</div>
-                <div class="hi-meta">${escHtml(dateStr)} · ${escHtml(entry.profileName)} · ${entry.totalCreated} output file${entry.totalCreated !== 1 ? 's' : ''}</div>
-              </div>
-            </div>
-            <div class="hi-body">
-              <div class="hi-files">${(entry.files || []).map(f => `<span class="hi-file" title="${escHtml(f.path)}">${escHtml(f.name)}</span>`).join('')}</div>
-              <div class="hi-actions">
-                <button class="btn btn-accent" style="font-size:10px;padding:4px 10px" data-rerun="${escHtml(entry.id)}">▶ Re-run</button>
-                <button class="btn" style="font-size:10px;padding:4px 10px" data-openfolder="${escHtml(entry.id)}">Open Folder ↗</button>
-              </div>
-            </div>`;
-
-          card.querySelector('.hi-header').addEventListener('click', () => card.classList.toggle('open'));
-          card.querySelector('[data-rerun]').addEventListener('click', (e) => { e.stopPropagation(); rerunHistory(entry); });
-          card.querySelector('[data-openfolder]').addEventListener('click', (e) => { e.stopPropagation(); window.splitify.openFolder(entry.outputDir); });
-
-          list.appendChild(card);
-        });
-      } catch(err) {
+      if (!history || history.length === 0) {
         empty.style.display = '';
-        empty.querySelector('.es-text').textContent = 'Error loading history: ' + err.message;
+        countEl.textContent = '';
+        return;
       }
+
+      empty.style.display = 'none';
+      countEl.textContent = history.length + ' entr' + (history.length === 1 ? 'y' : 'ies');
+
+      history.forEach(entry => {
+        const d = new Date(entry.timestamp);
+        const dateStr = d.toLocaleDateString() + ' · ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        const firstName = entry.files && entry.files[0] ? entry.files[0].name : 'Unknown';
+        const extraCount = entry.files && entry.files.length > 1 ? ' +' + (entry.files.length - 1) + ' more' : '';
+
+        const card = document.createElement('div');
+        card.className = 'hi';
+        card.dataset.id = entry.id;
+        card.innerHTML = `
+          <div class="hi-header">
+            <span class="hi-chevron">▶</span>
+            <div class="hi-title">
+              <div class="hi-name">${escHtml(firstName)}${escHtml(extraCount)}</div>
+              <div class="hi-meta">${escHtml(dateStr)} · ${escHtml(entry.profileName)} · ${entry.totalCreated} output file${entry.totalCreated !== 1 ? 's' : ''}</div>
+            </div>
+          </div>
+          <div class="hi-body">
+            <div class="hi-files">${(entry.files || []).map(f => `<span class="hi-file" title="${escHtml(f.path)}">${escHtml(f.name)}</span>`).join('')}</div>
+            <div class="hi-actions">
+              <button class="btn btn-accent" style="font-size:10px;padding:4px 10px" data-rerun="${escHtml(entry.id)}">▶ Re-run</button>
+              <button class="btn" style="font-size:10px;padding:4px 10px" data-openfolder="${escHtml(entry.id)}">Open Folder ↗</button>
+            </div>
+          </div>`;
+
+        card.querySelector('.hi-header').addEventListener('click', () => card.classList.toggle('open'));
+        card.querySelector('[data-rerun]').addEventListener('click', (e) => { e.stopPropagation(); rerunHistory(entry); });
+        card.querySelector('[data-openfolder]').addEventListener('click', (e) => { e.stopPropagation(); window.splitify.openFolder(entry.outputDir); });
+
+        list.appendChild(card);
+      });
     }
 
     async function rerunHistory(entry) {
@@ -2672,13 +2662,14 @@
       }
     }
 
-    document.getElementById('refresh-history-btn').addEventListener('click', renderHistory);
-
     document.getElementById('clear-history-btn').addEventListener('click', async () => {
       if (!confirm('Clear all split history?')) return;
       await window.splitify.clearHistory();
       renderHistory();
     });
+
+    // Load history when switching to history tab
+    document.querySelector('[data-tab="history"]').addEventListener('click', renderHistory);
 
   </script>
 </body>
