@@ -1286,24 +1286,126 @@
       --accent2: #1e6e12;
       --red-dim: rgba(200, 40, 40, 0.1);
     }
+
     /* ── History Tab ── */
-    #history-panel { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
-    #history-toolbar { display: flex; align-items: center; justify-content: space-between; padding: 10px 16px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
-    #history-count { font-size: 11px; font-weight: 700; color: var(--text3); text-transform: uppercase; letter-spacing: 0.5px; }
-    #history-list { flex: 1; overflow-y: auto; padding: 10px 12px; display: flex; flex-direction: column; gap: 6px; }
-    .hi { background: var(--bg2); border: 1px solid var(--border); border-radius: 7px; overflow: hidden; }
-    .hi-header { display: flex; align-items: center; gap: 9px; padding: 9px 12px; cursor: pointer; user-select: none; }
-    .hi-header:hover { background: var(--bg3); }
-    .hi-chevron { font-size: 9px; color: var(--text3); transition: transform 0.15s; flex-shrink: 0; }
-    .hi.open .hi-chevron { transform: rotate(90deg); }
-    .hi-title { flex: 1; min-width: 0; }
-    .hi-name { font-size: 12px; font-weight: 700; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .hi-meta { font-size: 10px; color: var(--text3); margin-top: 1px; }
-    .hi-body { display: none; padding: 8px 12px 10px; border-top: 1px solid var(--border); }
-    .hi.open .hi-body { display: block; }
-    .hi-files { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 8px; }
-    .hi-file { font-size: 10px; color: var(--text2); background: var(--bg3); border: 1px solid var(--border); border-radius: 3px; padding: 2px 7px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 200px; }
-    .hi-actions { display: flex; gap: 6px; }
+    #history-panel {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    #history-toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 16px;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+
+    #history-count {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text3);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    #history-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 10px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .hi {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      overflow: hidden;
+    }
+
+    .hi-header {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      padding: 9px 12px;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .hi-header:hover {
+      background: var(--bg3);
+    }
+
+    .hi-chevron {
+      font-size: 9px;
+      color: var(--text3);
+      transition: transform 0.15s;
+      flex-shrink: 0;
+    }
+
+    .hi.open .hi-chevron {
+      transform: rotate(90deg);
+    }
+
+    .hi-title {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .hi-name {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .hi-meta {
+      font-size: 10px;
+      color: var(--text3);
+      margin-top: 1px;
+    }
+
+    .hi-body {
+      display: none;
+      padding: 8px 12px 10px;
+      border-top: 1px solid var(--border);
+    }
+
+    .hi.open .hi-body {
+      display: block;
+    }
+
+    .hi-files {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      margin-bottom: 8px;
+    }
+
+    .hi-file {
+      font-size: 10px;
+      color: var(--text2);
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      padding: 2px 7px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 200px;
+    }
+
+    .hi-actions {
+      display: flex;
+      gap: 6px;
+    }
   </style>
 </head>
 
@@ -1526,7 +1628,7 @@
           </div>
         </div>
 
-<!-- Import / Export Profiles -->
+        <!-- Import / Export Profiles -->
         <div class="settings-section">
           <div class="settings-section-title">Profiles — Import / Export</div>
 
@@ -1596,23 +1698,22 @@
       </div>
     </div>
 
-  </div>
-
-  <!-- ════════════ HISTORY TAB ════════════ -->
-  <div id="tab-history" class="tab-panel">
-    <div id="history-panel">
-      <div id="history-toolbar">
-        <span id="history-count"></span>
-        <div style="display:flex;gap:6px">
-          <button class="btn" id="refresh-history-btn" style="font-size:10px;padding:4px 10px">↻ Refresh</button>
-          <button class="btn" id="clear-history-btn" style="font-size:10px;padding:4px 10px">Clear All</button>
+    <!-- ════════════ HISTORY TAB ════════════ -->
+    <div id="tab-history" class="tab-panel">
+      <div id="history-panel">
+        <div id="history-toolbar">
+          <span id="history-count"></span>
+          <div style="display:flex;gap:6px">
+            <button class="btn" id="refresh-history-btn" style="font-size:10px;padding:4px 10px">↻ Refresh</button>
+            <button class="btn" id="clear-history-btn" style="font-size:10px;padding:4px 10px">Clear All</button>
+          </div>
         </div>
-      </div>
-      <div id="history-list"></div>
-      <div id="history-empty" style="display:none">
-        <div class="empty-state">
-          <div class="es-icon">◷</div>
-          <div class="es-text">No history yet.<br>Completed splits will appear here.</div>
+        <div id="history-list"></div>
+        <div id="history-empty" style="display:none">
+          <div class="empty-state">
+            <div class="es-icon">◷</div>
+            <div class="es-text">No history yet.<br>Completed splits will appear here.</div>
+          </div>
         </div>
       </div>
     </div>
@@ -2479,11 +2580,11 @@
       }
       const fallback = setTimeout(resetBtn, 10000);
       const origNotAvail = window._checkBtnReset_notAvail;
-      const origError    = window._checkBtnReset_error;
-      const origAvail    = window._checkBtnReset_avail;
+      const origError = window._checkBtnReset_error;
+      const origAvail = window._checkBtnReset_avail;
       window._checkBtnReset_notAvail = () => { clearTimeout(fallback); resetBtn(); if (origNotAvail) origNotAvail(); };
-      window._checkBtnReset_error    = () => { clearTimeout(fallback); resetBtn(); if (origError)    origError(); };
-      window._checkBtnReset_avail    = () => { clearTimeout(fallback); resetBtn(); if (origAvail)    origAvail(); };
+      window._checkBtnReset_error = () => { clearTimeout(fallback); resetBtn(); if (origError) origError(); };
+      window._checkBtnReset_avail = () => { clearTimeout(fallback); resetBtn(); if (origAvail) origAvail(); };
     });
 
     // Feedback
@@ -2619,7 +2720,7 @@
         window.splitify.saveProfiles(profiles);
         renderProfileList();
         populateProfileSelect();
-          this.value = '';
+        this.value = '';
       } catch (e) {
         alert('Failed to read file: ' + e.message);
       }
@@ -2629,8 +2730,8 @@
     //  HISTORY
     // ═══════════════════════════════════════════
     async function renderHistory() {
-      const list    = document.getElementById('history-list');
-      const empty   = document.getElementById('history-empty');
+      const list = document.getElementById('history-list');
+      const empty = document.getElementById('history-empty');
       const countEl = document.getElementById('history-count');
 
       list.innerHTML = '';
@@ -2640,7 +2741,7 @@
       let history;
       try {
         history = await window.splitify.getHistory();
-      } catch(err) {
+      } catch (err) {
         empty.querySelector('.es-text').textContent = 'Failed to load history: ' + err.message;
         empty.style.display = '';
         return;
@@ -2685,7 +2786,7 @@
           card.querySelector('[data-openfolder]').addEventListener('click', (e) => { e.stopPropagation(); window.splitify.openFolder(entry.outputDir); });
 
           list.appendChild(card);
-        } catch(entryErr) {
+        } catch (entryErr) {
           console.error('Error rendering history entry:', entry.id, entryErr);
         }
       });
