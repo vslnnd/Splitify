@@ -1316,7 +1316,11 @@
     <div id="update-banner">
       <div style="font-size:14px;flex-shrink:0">↑</div>
       <div style="flex:1;min-width:0">
-        <div class="ub-text" id="ub-text">Update available</div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <div class="ub-text" id="ub-text">Update available</div>
+          <button id="ub-notes-toggle" style="display:none;background:none;border:none;cursor:pointer;font-size:10px;font-weight:700;color:var(--accent2);font-family:var(--mono);padding:0;letter-spacing:0.5px">WHAT'S NEW ▾</button>
+        </div>
+        <div id="ub-notes" style="display:none;margin-top:5px;font-size:11px;color:var(--text2);line-height:1.6;font-weight:400;padding:6px 8px;background:rgba(184,242,160,0.05);border-radius:4px;border:1px solid rgba(184,242,160,0.1)"></div>
         <div id="ub-progress-wrap" style="display:none">
           <div class="ub-progress">
             <div class="ub-bar" id="ub-bar"></div>
@@ -2288,10 +2292,23 @@
         console.log('[updater] checking for updates...');
       });
 
-      window.splitify.onUpdateAvailable(version => {
+      window.splitify.onUpdateAvailable(data => {
+        const version = typeof data === 'object' ? data.version : data;
+        const notes   = typeof data === 'object' ? data.notes   : null;
         console.log('[updater] update available:', version);
         document.getElementById('ub-text').textContent = `v${version} available — downloading...`;
         document.getElementById('update-banner').classList.add('visible');
+        if (notes) {
+          const notesEl  = document.getElementById('ub-notes');
+          const toggleEl = document.getElementById('ub-notes-toggle');
+          notesEl.textContent = notes;
+          toggleEl.style.display = '';
+          toggleEl.addEventListener('click', () => {
+            const open = notesEl.style.display !== 'none';
+            notesEl.style.display = open ? 'none' : '';
+            toggleEl.textContent = open ? "WHAT'S NEW ▾" : "WHAT'S NEW ▴";
+          });
+        }
       });
 
       window.splitify.onUpdateNotAvailable && window.splitify.onUpdateNotAvailable(version => {
