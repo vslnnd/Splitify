@@ -142,10 +142,7 @@ app.whenReady().then(() => {
   });
 
   autoUpdater.on('update-available', (info) => {
-    if (mainWindow) mainWindow.webContents.send('update-available', {
-      version: info.version,
-      notes: info.releaseNotes || null
-    });
+    if (mainWindow) mainWindow.webContents.send('update-available', info.version);
   });
 
   autoUpdater.on('update-not-available', (info) => {

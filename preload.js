@@ -13,7 +13,7 @@ contextBridge.exposeInMainWorld('splitify', {
 
   // Auto-updater
   installUpdate: () => ipcRenderer.invoke('install-update'),
-  onUpdateAvailable: (cb) => ipcRenderer.on('update-available', (_, data) => cb(data)),
+  onUpdateAvailable: (cb) => ipcRenderer.on('update-available', (_, version) => cb(version)),
   onUpdateProgress: (cb) => ipcRenderer.on('update-progress', (_, percent) => cb(percent)),
   onUpdateDownloaded: (cb) => ipcRenderer.on('update-downloaded', () => cb()),
   onUpdateChecking: (cb) => ipcRenderer.on('update-checking', () => cb()),
