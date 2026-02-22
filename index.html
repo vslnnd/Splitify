@@ -688,8 +688,10 @@
       border: 1px solid var(--border);
       border-radius: var(--radius);
       padding: 10px;
-      max-height: 150px;
+      max-height: 180px;
       overflow-y: auto;
+      flex-shrink: 0;
+      margin: 0 16px 8px;
     }
 
     #log-area.visible {
@@ -1404,10 +1406,10 @@
             </div>
             <div id="queue-list"></div>
           </div>
-
-          <!-- Log -->
-          <div id="log-area"></div>
         </div>
+
+        <!-- LOG: separated from queue, above bottom bar -->
+        <div id="log-area"></div>
 
         <!-- BOTTOM: always visible, sticky -->
         <div id="split-bottom" style="display:none">
@@ -1797,7 +1799,10 @@
       const customPfx = document.getElementById('custom-prefix-toggle').checked ? document.getElementById('custom-prefix').value.trim() : '';
       const base = customPfx || item.name.replace(/\.[^.]+$/, '');
 
-      // Build region map
+      // Build set of values actually present in the file column
+      const sampleVals = new Set((item.samples[colIdx] || []).map(v => String(v).trim().toLowerCase()));
+
+      // Build region map — only include regions where at least one value matches
       const regionMap = new Map();
       const excluded = [];
       profile.parameters.forEach(p => {
@@ -1810,8 +1815,13 @@
         }
       });
 
+      // Filter to only regions that have at least one matching sample value
+      const matchedRegions = Array.from(regionMap.entries())
+        .filter(([, values]) => values.some(v => sampleVals.has(String(v).trim().toLowerCase())))
+        .map(([region]) => region);
+
       item.previews = {
-        regions: Array.from(regionMap.keys()).map(r => `${dateStr}_${base}_${r}.xlsx`),
+        regions: matchedRegions.map(r => `${dateStr}_${base}_${r}.xlsx`),
         excluded: excluded
       };
     }
