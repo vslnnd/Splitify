@@ -2301,7 +2301,7 @@
         if (notes) {
           const notesEl  = document.getElementById('ub-notes');
           const toggleEl = document.getElementById('ub-notes-toggle');
-          notesEl.textContent = notes;
+          notesEl.textContent = notes.replace(/<[^>]*>/g, '').trim();
           toggleEl.style.display = '';
           toggleEl.addEventListener('click', () => {
             const open = notesEl.style.display !== 'none';
