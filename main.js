@@ -11,7 +11,8 @@ const DEFAULT_SETTINGS = {
   theme: 'dark',
   favoriteProfileId: null,
   updateIntervalHours: 4,
-  checkUpdatesOnStartup: true
+  checkUpdatesOnStartup: true,
+  lastSeenVersion: null
 };
 
 function loadSettings() {
@@ -107,7 +108,18 @@ function createWindow() {
   mainWindow.loadFile('index.html');
   mainWindow.setMenu(null);
   mainWindow.webContents.on('did-finish-load', () => {
-    mainWindow.webContents.send('app-version', app.getVersion());
+    const currentVersion = app.getVersion();
+    mainWindow.webContents.send('app-version', currentVersion);
+
+    const settings = loadSettings();
+    if (settings.lastSeenVersion && settings.lastSeenVersion !== currentVersion) {
+      // First launch after an update — show What's New
+      setTimeout(() => mainWindow.webContents.send('first-launch-after-update', currentVersion), 500);
+    }
+    if (settings.lastSeenVersion !== currentVersion) {
+      settings.lastSeenVersion = currentVersion;
+      saveSettings(settings);
+    }
   });
 }
 

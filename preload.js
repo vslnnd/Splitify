@@ -20,6 +20,7 @@ contextBridge.exposeInMainWorld('splitify', {
   onUpdateNotAvailable: (cb) => ipcRenderer.on('update-not-available', (_, v) => cb(v)),
   onUpdateError: (cb) => ipcRenderer.on('update-error', (_, msg) => cb(msg)),
   onAppVersion: (cb) => ipcRenderer.on('app-version', (_, v) => cb(v)),
+  onFirstLaunchAfterUpdate: (cb) => ipcRenderer.on('first-launch-after-update', (_, v) => cb(v)),
 
   // Settings
   getSettings: () => ipcRenderer.invoke('get-settings'),
