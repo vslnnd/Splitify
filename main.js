@@ -6,13 +6,13 @@ const XLSX = require('xlsx');
 
 const PROFILES_PATH  = path.join(app.getPath('userData'), 'splitify_profiles.json');
 const SETTINGS_PATH  = path.join(app.getPath('userData'), 'splitify_settings.json');
+const HISTORY_PATH   = path.join(app.getPath('userData'), 'splitify_history.json');
 
 const DEFAULT_SETTINGS = {
   theme: 'dark',
   favoriteProfileId: null,
   updateIntervalHours: 4,
-  checkUpdatesOnStartup: true,
-  lastSeenVersion: null
+  checkUpdatesOnStartup: true
 };
 
 function loadSettings() {
@@ -26,6 +26,18 @@ function loadSettings() {
 
 function saveSettings(settings) {
   try { fs.writeFileSync(SETTINGS_PATH, JSON.stringify(settings, null, 2)); return true; }
+  catch(e) { return false; }
+}
+
+// ─── History Storage ──────────────────────────────────────────────────────────
+function loadHistory() {
+  try {
+    if (fs.existsSync(HISTORY_PATH)) return JSON.parse(fs.readFileSync(HISTORY_PATH, 'utf8'));
+  } catch(e) {}
+  return [];
+}
+function saveHistory(history) {
+  try { fs.writeFileSync(HISTORY_PATH, JSON.stringify(history, null, 2)); return true; }
   catch(e) { return false; }
 }
 
@@ -108,18 +120,7 @@ function createWindow() {
   mainWindow.loadFile('index.html');
   mainWindow.setMenu(null);
   mainWindow.webContents.on('did-finish-load', () => {
-    const currentVersion = app.getVersion();
-    mainWindow.webContents.send('app-version', currentVersion);
-
-    const settings = loadSettings();
-    if (settings.lastSeenVersion && settings.lastSeenVersion !== currentVersion) {
-      // First launch after an update — show What's New
-      setTimeout(() => mainWindow.webContents.send('first-launch-after-update', currentVersion), 500);
-    }
-    if (settings.lastSeenVersion !== currentVersion) {
-      settings.lastSeenVersion = currentVersion;
-      saveSettings(settings);
-    }
+    mainWindow.webContents.send('app-version', app.getVersion());
   });
 }
 
@@ -154,10 +155,7 @@ app.whenReady().then(() => {
   });
 
   autoUpdater.on('update-available', (info) => {
-    if (mainWindow) mainWindow.webContents.send('update-available', {
-      version: info.version,
-      notes: info.releaseNotes || null
-    });
+    if (mainWindow) mainWindow.webContents.send('update-available', info.version);
   });
 
   autoUpdater.on('update-not-available', (info) => {
@@ -355,3 +353,12 @@ ipcMain.handle('check-for-updates', () => {
   });
 });
 ipcMain.handle('open-external', (_, url) => shell.openExternal(url));
+
+ipcMain.handle('get-history', () => loadHistory());
+ipcMain.handle('add-history-entry', (_, entry) => {
+  const h = loadHistory();
+  h.unshift(entry);
+  if (h.length > 100) h.splice(100);
+  return saveHistory(h);
+});
+ipcMain.handle('clear-history', () => saveHistory([]));

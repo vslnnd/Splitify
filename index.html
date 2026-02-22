@@ -1284,6 +1284,24 @@
       --accent2: #1e6e12;
       --red-dim: rgba(200, 40, 40, 0.1);
     }
+    /* ── History Tab ── */
+    #history-panel { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+    #history-toolbar { display: flex; align-items: center; justify-content: space-between; padding: 10px 16px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+    #history-count { font-size: 11px; font-weight: 700; color: var(--text3); text-transform: uppercase; letter-spacing: 0.5px; }
+    #history-list { flex: 1; overflow-y: auto; padding: 10px 12px; display: flex; flex-direction: column; gap: 6px; }
+    .hi { background: var(--bg2); border: 1px solid var(--border); border-radius: 7px; overflow: hidden; }
+    .hi-header { display: flex; align-items: center; gap: 9px; padding: 9px 12px; cursor: pointer; user-select: none; }
+    .hi-header:hover { background: var(--bg3); }
+    .hi-chevron { font-size: 9px; color: var(--text3); transition: transform 0.15s; flex-shrink: 0; }
+    .hi.open .hi-chevron { transform: rotate(90deg); }
+    .hi-title { flex: 1; min-width: 0; }
+    .hi-name { font-size: 12px; font-weight: 700; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .hi-meta { font-size: 10px; color: var(--text3); margin-top: 1px; }
+    .hi-body { display: none; padding: 8px 12px 10px; border-top: 1px solid var(--border); }
+    .hi.open .hi-body { display: block; }
+    .hi-files { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 8px; }
+    .hi-file { font-size: 10px; color: var(--text2); background: var(--bg3); border: 1px solid var(--border); border-radius: 3px; padding: 2px 7px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 200px; }
+    .hi-actions { display: flex; gap: 6px; }
   </style>
 </head>
 
@@ -1316,11 +1334,7 @@
     <div id="update-banner">
       <div style="font-size:14px;flex-shrink:0">↑</div>
       <div style="flex:1;min-width:0">
-        <div style="display:flex;align-items:center;gap:8px">
-          <div class="ub-text" id="ub-text">Update available</div>
-          <button id="ub-notes-toggle" style="display:none;background:none;border:none;cursor:pointer;font-size:10px;font-weight:700;color:var(--accent2);font-family:var(--mono);padding:0;letter-spacing:0.5px">WHAT'S NEW ▾</button>
-        </div>
-        <div id="ub-notes" style="display:none;margin-top:5px;font-size:11px;color:var(--text2);line-height:1.6;font-weight:400;padding:6px 8px;background:rgba(184,242,160,0.05);border-radius:4px;border:1px solid rgba(184,242,160,0.1)"></div>
+        <div class="ub-text" id="ub-text">Update available</div>
         <div id="ub-progress-wrap" style="display:none">
           <div class="ub-progress">
             <div class="ub-bar" id="ub-bar"></div>
@@ -1335,6 +1349,7 @@
       <div class="tab active" data-tab="split">⚡ Split File</div>
       <div class="tab" data-tab="profiles">◈ Profiles</div>
       <div class="tab" data-tab="settings">⚙ Settings</div>
+      <div class="tab" data-tab="history">◷ History</div>
     </div>
 
     <!-- ════════════ SPLIT TAB ════════════ -->
@@ -1579,6 +1594,23 @@
       </div>
     </div>
 
+  </div>
+
+  <!-- ════════════ HISTORY TAB ════════════ -->
+  <div id="tab-history" class="tab-panel">
+    <div id="history-panel">
+      <div id="history-toolbar">
+        <span id="history-count"></span>
+        <button class="btn" id="clear-history-btn" style="font-size:10px;padding:4px 10px">Clear All</button>
+      </div>
+      <div id="history-list"></div>
+      <div id="history-empty" style="display:none">
+        <div class="empty-state">
+          <div class="es-icon">◷</div>
+          <div class="es-text">No history yet.<br>Completed splits will appear here.</div>
+        </div>
+      </div>
+    </div>
   </div>
 
   <!-- Profile Editor Modal -->
@@ -2111,6 +2143,22 @@
       text.textContent = 'SPLIT SELECTED FILES';
       updateSplitBtn();
       updateSelectAll();
+
+      // Save to history
+      const doneItems = toProcess.filter(q => q.status === 'done');
+      if (doneItems.length > 0) {
+        const profileName = profile ? profile.name : '— no profile —';
+        const savedOutputDir = outputDir || doneItems[0].path.replace(/[\\/][^\\/]+$/, '');
+        const entry = {
+          id: 'h_' + Date.now(),
+          timestamp: new Date().toISOString(),
+          profileName,
+          files: doneItems.map(q => ({ name: q.name, path: q.path })),
+          outputDir: savedOutputDir,
+          totalCreated
+        };
+        window.splitify.addHistoryEntry(entry).then(() => renderHistory());
+      }
     }
 
     // ═══════════════════════════════════════════
@@ -2292,23 +2340,10 @@
         console.log('[updater] checking for updates...');
       });
 
-      window.splitify.onUpdateAvailable(data => {
-        const version = typeof data === 'object' ? data.version : data;
-        const notes   = typeof data === 'object' ? data.notes   : null;
+      window.splitify.onUpdateAvailable(version => {
         console.log('[updater] update available:', version);
         document.getElementById('ub-text').textContent = `v${version} available — downloading...`;
         document.getElementById('update-banner').classList.add('visible');
-        if (notes) {
-          const notesEl  = document.getElementById('ub-notes');
-          const toggleEl = document.getElementById('ub-notes-toggle');
-          notesEl.textContent = notes.replace(/<[^>]*>/g, '').trim();
-          toggleEl.style.display = '';
-          toggleEl.addEventListener('click', () => {
-            const open = notesEl.style.display !== 'none';
-            notesEl.style.display = open ? 'none' : '';
-            toggleEl.textContent = open ? "WHAT'S NEW ▾" : "WHAT'S NEW ▴";
-          });
-        }
       });
 
       window.splitify.onUpdateNotAvailable && window.splitify.onUpdateNotAvailable(version => {
@@ -2554,54 +2589,89 @@
     });
 
     // ═══════════════════════════════════════════
-    //  WHAT'S NEW MODAL
+    //  HISTORY
     // ═══════════════════════════════════════════
-    function showWhatsNew(version, notes) {
-      document.getElementById('whatsnew-version').textContent = 'Version ' + version;
-      document.getElementById('whatsnew-notes').textContent = notes || 'No patch notes available.';
-      const overlay = document.getElementById('whatsnew-overlay');
-      overlay.style.display = 'flex';
-    }
+    async function renderHistory() {
+      const history = await window.splitify.getHistory();
+      const list    = document.getElementById('history-list');
+      const empty   = document.getElementById('history-empty');
+      const countEl = document.getElementById('history-count');
 
-    function closeWhatsNew() {
-      document.getElementById('whatsnew-overlay').style.display = 'none';
-    }
+      list.innerHTML = '';
 
-    document.getElementById('whatsnew-close').addEventListener('click', closeWhatsNew);
-    document.getElementById('whatsnew-ok').addEventListener('click', closeWhatsNew);
+      if (!history || history.length === 0) {
+        empty.style.display = '';
+        countEl.textContent = '';
+        return;
+      }
 
-    if (window.splitify && window.splitify.onFirstLaunchAfterUpdate) {
-      window.splitify.onFirstLaunchAfterUpdate(async (version) => {
-        try {
-          const resp = await fetch(`https://api.github.com/repos/vslnnd/Splitify/releases/tags/v${version}`);
-          const data = await resp.json();
-          const raw = data.body || '';
-          const notes = raw.replace(/<[^>]*>/g, '').trim() || 'No patch notes for this version.';
-          showWhatsNew(version, notes);
-        } catch(e) {
-          showWhatsNew(version, 'Could not load patch notes.');
-        }
+      empty.style.display = 'none';
+      countEl.textContent = history.length + ' entr' + (history.length === 1 ? 'y' : 'ies');
+
+      history.forEach(entry => {
+        const d = new Date(entry.timestamp);
+        const dateStr = d.toLocaleDateString() + ' · ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        const firstName = entry.files && entry.files[0] ? entry.files[0].name : 'Unknown';
+        const extraCount = entry.files && entry.files.length > 1 ? ' +' + (entry.files.length - 1) + ' more' : '';
+
+        const card = document.createElement('div');
+        card.className = 'hi';
+        card.dataset.id = entry.id;
+        card.innerHTML = `
+          <div class="hi-header">
+            <span class="hi-chevron">▶</span>
+            <div class="hi-title">
+              <div class="hi-name">${escHtml(firstName)}${escHtml(extraCount)}</div>
+              <div class="hi-meta">${escHtml(dateStr)} · ${escHtml(entry.profileName)} · ${entry.totalCreated} output file${entry.totalCreated !== 1 ? 's' : ''}</div>
+            </div>
+          </div>
+          <div class="hi-body">
+            <div class="hi-files">${(entry.files || []).map(f => `<span class="hi-file" title="${escHtml(f.path)}">${escHtml(f.name)}</span>`).join('')}</div>
+            <div class="hi-actions">
+              <button class="btn btn-accent" style="font-size:10px;padding:4px 10px" data-rerun="${escHtml(entry.id)}">▶ Re-run</button>
+              <button class="btn" style="font-size:10px;padding:4px 10px" data-openfolder="${escHtml(entry.id)}">Open Folder ↗</button>
+            </div>
+          </div>`;
+
+        card.querySelector('.hi-header').addEventListener('click', () => card.classList.toggle('open'));
+        card.querySelector('[data-rerun]').addEventListener('click', (e) => { e.stopPropagation(); rerunHistory(entry); });
+        card.querySelector('[data-openfolder]').addEventListener('click', (e) => { e.stopPropagation(); window.splitify.openFolder(entry.outputDir); });
+
+        list.appendChild(card);
       });
     }
 
-  </script>
-  <!-- ════ WHAT'S NEW MODAL ════ -->
-  <div id="whatsnew-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);align-items:center;justify-content:center;z-index:9999;backdrop-filter:blur(3px)">
-    <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:10px;width:90%;max-width:420px;display:flex;flex-direction:column;max-height:80vh;box-shadow:0 24px 60px rgba(0,0,0,0.6)">
-      <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--border);flex-shrink:0">
-        <span style="font-size:13px;font-weight:700">🎉 What's New</span>
-        <button id="whatsnew-close" style="background:none;border:none;cursor:pointer;color:var(--text3);font-size:16px;padding:0 4px;line-height:1">✕</button>
-      </div>
-      <div style="flex:1;overflow-y:auto;padding:16px">
-        <div id="whatsnew-version" style="font-size:10px;font-weight:700;color:var(--accent);margin-bottom:10px;letter-spacing:0.8px;text-transform:uppercase"></div>
-        <div id="whatsnew-notes" style="font-size:12px;color:var(--text2);line-height:1.8;font-weight:400;white-space:pre-wrap"></div>
-      </div>
-      <div style="padding:12px 16px;border-top:1px solid var(--border);flex-shrink:0">
-        <button id="whatsnew-ok" class="btn btn-accent" style="width:100%;padding:10px;font-size:12px">Got it!</button>
-      </div>
-    </div>
-  </div>
+    async function rerunHistory(entry) {
+      // Switch to Split tab
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+      document.querySelector('[data-tab="split"]').classList.add('active');
+      document.getElementById('tab-split').classList.add('active');
 
+      // Add files back to queue
+      for (const f of (entry.files || [])) {
+        await addToQueue(f.path);
+      }
+
+      // Re-select profile by name
+      const prof = profiles.find(p => p.name === entry.profileName);
+      if (prof) {
+        document.getElementById('profile-select').value = prof.id;
+        recomputeAllPreviews();
+        updateSplitBtn();
+      }
+    }
+
+    document.getElementById('clear-history-btn').addEventListener('click', async () => {
+      if (!confirm('Clear all split history?')) return;
+      await window.splitify.clearHistory();
+      renderHistory();
+    });
+
+    // Load history when switching to history tab
+    document.querySelector('[data-tab="history"]').addEventListener('click', renderHistory);
+
+  </script>
 </body>
 
 </html>

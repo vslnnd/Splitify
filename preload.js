@@ -13,18 +13,22 @@ contextBridge.exposeInMainWorld('splitify', {
 
   // Auto-updater
   installUpdate: () => ipcRenderer.invoke('install-update'),
-  onUpdateAvailable: (cb) => ipcRenderer.on('update-available', (_, data) => cb(data)),
+  onUpdateAvailable: (cb) => ipcRenderer.on('update-available', (_, version) => cb(version)),
   onUpdateProgress: (cb) => ipcRenderer.on('update-progress', (_, percent) => cb(percent)),
   onUpdateDownloaded: (cb) => ipcRenderer.on('update-downloaded', () => cb()),
   onUpdateChecking: (cb) => ipcRenderer.on('update-checking', () => cb()),
   onUpdateNotAvailable: (cb) => ipcRenderer.on('update-not-available', (_, v) => cb(v)),
   onUpdateError: (cb) => ipcRenderer.on('update-error', (_, msg) => cb(msg)),
   onAppVersion: (cb) => ipcRenderer.on('app-version', (_, v) => cb(v)),
-  onFirstLaunchAfterUpdate: (cb) => ipcRenderer.on('first-launch-after-update', (_, v) => cb(v)),
 
   // Settings
   getSettings: () => ipcRenderer.invoke('get-settings'),
   saveSettings: (s) => ipcRenderer.invoke('save-settings', s),
   checkForUpdates: () => ipcRenderer.invoke('check-for-updates'),
-  openExternal: (url) => ipcRenderer.invoke('open-external', url)
+  openExternal: (url) => ipcRenderer.invoke('open-external', url),
+
+  // History
+  getHistory: () => ipcRenderer.invoke('get-history'),
+  addHistoryEntry: (entry) => ipcRenderer.invoke('add-history-entry', entry),
+  clearHistory: () => ipcRenderer.invoke('clear-history'),
 });
