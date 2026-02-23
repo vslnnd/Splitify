@@ -1,6 +1,6 @@
 {
   "name": "splitify",
-  "version": "1.4.6",
+  "version": "1.4.7",
   "description": "Excel file splitter with profile management",
   "main": "main.js",
   "scripts": {
