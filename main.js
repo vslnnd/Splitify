@@ -3,6 +3,7 @@ const { autoUpdater } = require('electron-updater');
 const path = require('path');
 const fs = require('fs');
 const XLSX = require('xlsx');
+const ExcelJS = require('exceljs');
 
 const PROFILES_PATH = path.join(app.getPath('userData'), 'splitify_profiles.json');
 const SETTINGS_PATH = path.join(app.getPath('userData'), 'splitify_settings.json');
@@ -249,17 +250,15 @@ ipcMain.handle('read-file-columns', async (_, filePath) => {
 });
 
 
+
 ipcMain.handle('split-file', async (_, { filePath, columnIndex, parameters, outputDir, keepNonMatching, outputPrefix }) => {
   try {
-    // Read with full style/format/number-format preservation
-    const workbook = XLSX.readFile(filePath, { cellStyles: true, cellDates: true, cellNF: true, sheetStubs: true });
-    const sheetName = workbook.SheetNames[0];
-    const sheet = workbook.Sheets[sheetName];
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.readFile(filePath);
 
-    const ref = sheet['!ref'];
-    if (!ref) return { error: 'File has no data' };
-    const range = XLSX.utils.decode_range(ref);
-    if (range.e.r < range.s.r + 1) return { error: 'File has no data rows' };
+    const worksheet = workbook.worksheets[0];
+    if (!worksheet) return { error: 'File has no sheets' };
+    const sheetName = worksheet.name;
 
     // Build parameter map
     const paramMap = new Map();
@@ -271,112 +270,169 @@ ipcMain.handle('split-file', async (_, { filePath, columnIndex, parameters, outp
     const dateStr = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
     const fileBase = outputPrefix || path.basename(filePath, path.extname(filePath));
 
-    const headerRowIdx = range.s.r;
+    // Collect header row and group data rows by region
+    const headerRow = worksheet.getRow(1);
     const regionGroups = new Map();
-    const excludedRowIndices = [];
-    const nonMatchingRowIndices = [];
+    const excludedRows = [];
+    const nonMatchingRows = [];
 
-    for (let R = range.s.r + 1; R <= range.e.r; R++) {
-      const cellAddr = XLSX.utils.encode_cell({ r: R, c: range.s.c + columnIndex });
-      const cell = sheet[cellAddr];
-      const cellVal = cell ? String(cell.v ?? '').trim() : '';
+    worksheet.eachRow((row, rowNumber) => {
+      if (rowNumber === 1) return;
+      const cell = row.getCell(columnIndex + 1); // ExcelJS is 1-indexed
+      let cellVal = '';
+      if (cell.value !== null && cell.value !== undefined) {
+        // Handle rich text objects
+        cellVal = (cell.value && typeof cell.value === 'object' && cell.value.richText)
+          ? cell.value.richText.map(r => r.text).join('')
+          : String(cell.value);
+        cellVal = cellVal.trim();
+      }
       const match = paramMap.get(cellVal.toLowerCase());
 
       if (match) {
         if (match.payable) {
           const regionKey = (match.label && match.label.trim()) ? match.label.trim() : String(match.value);
-          if (!regionGroups.has(regionKey)) regionGroups.set(regionKey, { rowIndices: [], costCenters: new Set() });
-          regionGroups.get(regionKey).rowIndices.push(R);
+          if (!regionGroups.has(regionKey)) regionGroups.set(regionKey, { rows: [], rowNumbers: [], costCenters: new Set() });
+          regionGroups.get(regionKey).rows.push(row);
+          regionGroups.get(regionKey).rowNumbers.push(rowNumber);
           regionGroups.get(regionKey).costCenters.add(String(match.value));
         } else {
-          excludedRowIndices.push(R);
+          excludedRows.push({ row, rowNumber });
         }
       } else {
-        nonMatchingRowIndices.push(R);
+        nonMatchingRows.push({ row, rowNumber });
       }
+    });
+
+    // Deep-copy all style properties from one cell to another
+    function copyStyle(srcCell, destCell) {
+      try {
+        if (srcCell.font)       destCell.font       = JSON.parse(JSON.stringify(srcCell.font));
+        if (srcCell.fill)       destCell.fill       = JSON.parse(JSON.stringify(srcCell.fill));
+        if (srcCell.border)     destCell.border     = JSON.parse(JSON.stringify(srcCell.border));
+        if (srcCell.alignment)  destCell.alignment  = JSON.parse(JSON.stringify(srcCell.alignment));
+        if (srcCell.numFmt)     destCell.numFmt     = srcCell.numFmt;
+        if (srcCell.protection) destCell.protection = JSON.parse(JSON.stringify(srcCell.protection));
+      } catch(e) {}
     }
 
-    // Build a new worksheet by copying raw cell objects from specific source rows.
-    // This preserves styles, number formats, data types, and column widths.
-    function buildSheet(rowIndices) {
-      const allRows = [headerRowIdx, ...rowIndices];
-      const ws = {};
+    // Copy a source row into a destination worksheet at a given row number
+    function copyRow(srcRow, destWs, destRowNum) {
+      const destRow = destWs.getRow(destRowNum);
+      if (srcRow.height) destRow.height = srcRow.height;
 
-      allRows.forEach((srcRow, destRowIdx) => {
-        for (let C = range.s.c; C <= range.e.c; C++) {
-          const srcAddr  = XLSX.utils.encode_cell({ r: srcRow, c: C });
-          const destAddr = XLSX.utils.encode_cell({ r: destRowIdx, c: C - range.s.c });
-          if (sheet[srcAddr]) {
-            ws[destAddr] = Object.assign({}, sheet[srcAddr]);
-          }
+      srcRow.eachCell({ includeEmpty: true }, (srcCell, colNum) => {
+        const destCell = destRow.getCell(colNum);
+
+        // Copy value — handle formulas, rich text, dates, etc.
+        if (srcCell.type === ExcelJS.ValueType.Formula) {
+          destCell.value = { formula: srcCell.formula, result: srcCell.result };
+        } else if (srcCell.type === ExcelJS.ValueType.RichText) {
+          destCell.value = JSON.parse(JSON.stringify(srcCell.value));
+        } else if (srcCell.type === ExcelJS.ValueType.Hyperlink) {
+          destCell.value = JSON.parse(JSON.stringify(srcCell.value));
+        } else {
+          destCell.value = srcCell.value;
         }
+
+        copyStyle(srcCell, destCell);
       });
 
-      ws['!ref'] = XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: allRows.length - 1, c: range.e.c - range.s.c } });
+      destRow.commit();
+    }
 
-      if (sheet['!cols']) ws['!cols'] = sheet['!cols'].map(c => c ? Object.assign({}, c) : c);
+    // Build output workbook with header + given rows, remapping merges correctly
+    async function writeRegionFile(outPath, srcRowEntries) {
+      const outWb = new ExcelJS.Workbook();
+      outWb.creator  = workbook.creator || 'Splitify';
+      outWb.modified = new Date();
 
-      if (sheet['!rows']) {
-        ws['!rows'] = allRows.map(srcRow => {
-          const orig = sheet['!rows'][srcRow - range.s.r];
-          return orig ? Object.assign({}, orig) : undefined;
+      const outWs = outWb.addWorksheet(sheetName);
+
+      // Copy column widths and styles
+      worksheet.columns.forEach((col, i) => {
+        if (!col) return;
+        const outCol = outWs.getColumn(i + 1);
+        if (col.width)  outCol.width  = col.width;
+        if (col.hidden) outCol.hidden = col.hidden;
+        if (col.style)  outCol.style  = JSON.parse(JSON.stringify(col.style));
+      });
+
+      // Build mapping: source row number -> destination row number
+      // Header (row 1 in source) -> row 1 in dest
+      // Data rows start at dest row 2
+      const srcToDestRow = new Map();
+      srcToDestRow.set(1, 1);
+      srcRowEntries.forEach(({ rowNumber }, idx) => {
+        srcToDestRow.set(rowNumber, idx + 2);
+      });
+
+      // Remap merges: only include merges where both start and end rows are in the output
+      const merges = worksheet.model && worksheet.model.merges;
+      if (merges && merges.length) {
+        merges.forEach(mergeRange => {
+          try {
+            // mergeRange is like "A1:C1"
+            const decoded = ExcelJS.utils
+              ? null // not available this way
+              : null;
+            // Parse manually
+            const match = mergeRange.match(/^([A-Z]+)(\d+):([A-Z]+)(\d+)$/);
+            if (!match) return;
+            const srcStartRow = parseInt(match[2]);
+            const srcEndRow   = parseInt(match[4]);
+            const startCol = match[1];
+            const endCol   = match[3];
+            if (srcToDestRow.has(srcStartRow) && srcToDestRow.has(srcEndRow)) {
+              const destStart = srcToDestRow.get(srcStartRow);
+              const destEnd   = srcToDestRow.get(srcEndRow);
+              outWs.mergeCells(`${startCol}${destStart}:${endCol}${destEnd}`);
+            }
+          } catch(e) {}
         });
       }
 
-      // Remap merged cells that are entirely within kept rows
-      if (sheet['!merges']) {
-        const srcRowToDestRow = new Map(allRows.map((srcRow, destIdx) => [srcRow, destIdx]));
-        ws['!merges'] = sheet['!merges']
-          .filter(m => srcRowToDestRow.has(m.s.r) && srcRowToDestRow.has(m.e.r))
-          .map(m => ({
-            s: { r: srcRowToDestRow.get(m.s.r), c: m.s.c - range.s.c },
-            e: { r: srcRowToDestRow.get(m.e.r), c: m.e.c - range.s.c }
-          }));
-      }
+      // Write header row
+      copyRow(headerRow, outWs, 1);
 
-      return ws;
+      // Write data rows
+      srcRowEntries.forEach(({ row }, idx) => {
+        copyRow(row, outWs, idx + 2);
+      });
+
+      await outWb.xlsx.writeFile(outPath);
     }
 
     const created = [];
     const skipped = [];
 
     for (const [region, group] of regionGroups) {
-      if (group.rowIndices.length === 0) { skipped.push(region); continue; }
+      if (group.rows.length === 0) { skipped.push(region); continue; }
 
       const safeRegion = region.replace(/[/\\?%*:|"<>]/g, '-');
       const fileName = `${dateStr}_${fileBase}_${safeRegion}.xlsx`;
       const outPath = path.join(outputDir, fileName);
 
-      const wb = XLSX.utils.book_new();
-      // Copy workbook-level styles/themes so cell styles render correctly
-      if (workbook.SSF)    wb.SSF    = workbook.SSF;
-      if (workbook.Styles) wb.Styles = workbook.Styles;
-      const ws = buildSheet(group.rowIndices);
-      XLSX.utils.book_append_sheet(wb, ws, sheetName);
-      XLSX.writeFile(wb, outPath, { cellStyles: true });
+      const entries = group.rows.map((row, i) => ({ row, rowNumber: group.rowNumbers[i] }));
+      await writeRegionFile(outPath, entries);
 
       created.push({
         file: fileName,
-        rows: group.rowIndices.length,
+        rows: group.rows.length,
         region,
         costCenters: Array.from(group.costCenters).sort()
       });
     }
 
-    const extraIndices = [
-      ...(keepNonMatching ? nonMatchingRowIndices : []),
-      ...(keepNonMatching ? excludedRowIndices : [])
+    const extraEntries = [
+      ...(keepNonMatching ? nonMatchingRows : []),
+      ...(keepNonMatching ? excludedRows   : [])
     ];
-    if (extraIndices.length > 0) {
+    if (extraEntries.length > 0) {
       const fileName = `${dateStr}_${fileBase}_NON_MATCHING.xlsx`;
       const outPath = path.join(outputDir, fileName);
-      const wb = XLSX.utils.book_new();
-      if (workbook.SSF)    wb.SSF    = workbook.SSF;
-      if (workbook.Styles) wb.Styles = workbook.Styles;
-      const ws = buildSheet(extraIndices);
-      XLSX.utils.book_append_sheet(wb, ws, sheetName);
-      XLSX.writeFile(wb, outPath, { cellStyles: true });
-      created.push({ file: fileName, rows: extraIndices.length, region: 'NON_MATCHING', costCenters: [] });
+      await writeRegionFile(outPath, extraEntries);
+      created.push({ file: fileName, rows: extraEntries.length, region: 'NON_MATCHING', costCenters: [] });
     }
 
     return { success: true, created, skipped, outputDir };
