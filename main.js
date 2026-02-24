@@ -163,7 +163,12 @@ app.whenReady().then(() => {
   });
 
   autoUpdater.on('download-progress', (progress) => {
-    if (mainWindow) mainWindow.webContents.send('update-progress', Math.round(progress.percent));
+    if (mainWindow) mainWindow.webContents.send('update-progress', {
+      percent: Math.round(progress.percent),
+      bytesPerSecond: progress.bytesPerSecond,
+      transferred: progress.transferred,
+      total: progress.total
+    });
   });
 
   autoUpdater.on('update-downloaded', () => {

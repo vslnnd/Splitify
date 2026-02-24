@@ -1516,7 +1516,7 @@
           <div class="logo-name">Splitify</div>
           <div style="display:flex;align-items:center;gap:6px">
             <div class="logo-version" id="app-version">v1.0.0</div>
-            <div class="logo-version">by VSL software</div>
+            <div class="logo-version">by Vellova Apps</div>
           </div>
         </div>
       </div>
@@ -1530,6 +1530,11 @@
         <div id="ub-progress-wrap" style="display:none">
           <div class="ub-progress">
             <div class="ub-bar" id="ub-bar"></div>
+          </div>
+          <div id="ub-progress-meta" style="display:flex;justify-content:space-between;margin-top:3px;font-size:10px;color:var(--text3);font-weight:500">
+            <span id="ub-meta-size"></span>
+            <span id="ub-meta-speed"></span>
+            <span id="ub-meta-eta"></span>
           </div>
         </div>
       </div>
@@ -2568,10 +2573,27 @@
         console.log('[updater] up to date, current:', version);
       });
 
-      window.splitify.onUpdateProgress(percent => {
-        document.getElementById('ub-text').textContent = `Downloading update... ${percent}%`;
+      window.splitify.onUpdateProgress(progress => {
+        const pct = typeof progress === 'object' ? progress.percent : progress;
+        document.getElementById('ub-text').textContent = `Downloading update... ${pct}%`;
         document.getElementById('ub-progress-wrap').style.display = '';
-        document.getElementById('ub-bar').style.width = percent + '%';
+        document.getElementById('ub-bar').style.width = pct + '%';
+        if (typeof progress === 'object') {
+          const fmt = n => n >= 1073741824 ? (n/1073741824).toFixed(1)+' GB'
+                        : n >= 1048576    ? (n/1048576).toFixed(1)+' MB'
+                        : n >= 1024       ? (n/1024).toFixed(0)+' KB'
+                        :                   n+' B';
+          const spd = n => n >= 1048576 ? (n/1048576).toFixed(1)+' MB/s'
+                         : n >= 1024    ? (n/1024).toFixed(0)+' KB/s'
+                         :                n+' B/s';
+          const eta = progress.bytesPerSecond > 0
+            ? (() => { const s = Math.round((progress.total - progress.transferred) / progress.bytesPerSecond);
+                       return s >= 60 ? Math.floor(s/60)+'m '+( s%60)+'s' : s+'s'; })()
+            : '—';
+          document.getElementById('ub-meta-size').textContent  = fmt(progress.transferred) + ' / ' + fmt(progress.total);
+          document.getElementById('ub-meta-speed').textContent = spd(progress.bytesPerSecond);
+          document.getElementById('ub-meta-eta').textContent   = 'ETA ' + eta;
+        }
       });
 
       window.splitify.onUpdateDownloaded(() => {
