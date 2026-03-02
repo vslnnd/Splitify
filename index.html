@@ -3265,6 +3265,14 @@
       window.splitify.onFirstLaunchAfterUpdate(data => showPatchNotes(data));
     }
 
+    // Patch notes button is rendered after this script tag — bind after DOM is ready
+    document.addEventListener('DOMContentLoaded', () => {
+      const btn = document.getElementById('patchnotes-btn');
+      if (btn) btn.addEventListener('click', () => {
+        document.getElementById('patchnotes-overlay').classList.remove('open');
+      });
+    });
+
   </script>
 
   <!-- Patch Notes Modal -->
