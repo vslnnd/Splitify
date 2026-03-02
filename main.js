@@ -2,7 +2,6 @@ const { app, BrowserWindow, ipcMain, dialog, shell } = require('electron');
 const { autoUpdater } = require('electron-updater');
 const path = require('path');
 const fs = require('fs');
-const XLSX = require('xlsx');
 const ExcelJS = require('exceljs');
 
 const PROFILES_PATH = path.join(app.getPath('userData'), 'splitify_profiles.json');
@@ -147,9 +146,21 @@ app.whenReady().then(() => {
     setTimeout(checkForUpdates, 3000);
   }
 
-  // Periodic check
-  const intervalMs = (settings.updateIntervalHours || 4) * 60 * 60 * 1000;
-  setInterval(checkForUpdates, intervalMs);
+  // Periodic check — re-reads settings each tick so runtime changes take effect
+  let periodicTimer = null;
+  function scheduleNextCheck() {
+    const currentSettings = loadSettings();
+    if (!currentSettings.checkUpdatesOnStartup) {
+      periodicTimer = setTimeout(scheduleNextCheck, 60 * 60 * 1000); // retry in 1h
+      return;
+    }
+    const intervalMs = (currentSettings.updateIntervalHours || 4) * 60 * 60 * 1000;
+    periodicTimer = setTimeout(() => {
+      checkForUpdates();
+      scheduleNextCheck();
+    }, intervalMs);
+  }
+  scheduleNextCheck();
 
   autoUpdater.on('checking-for-update', () => {
     if (mainWindow) mainWindow.webContents.send('update-checking');
@@ -222,25 +233,46 @@ ipcMain.handle('show-message-box', async (_, options) => {
 
 ipcMain.handle('read-file-columns', async (_, filePath) => {
   try {
-    const workbook = XLSX.readFile(filePath);
-    const sheetName = workbook.SheetNames[0];
-    const sheet = workbook.Sheets[sheetName];
-    const data = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
-    if (!data || data.length === 0) return { error: 'File is empty' };
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.readFile(filePath);
 
-    const headers = data[0].map((h, i) => ({ index: i, name: String(h || `Column ${i + 1}`) }));
-    const totalRows = data.length - 1;
-    const sheetNames = workbook.SheetNames;
+    const worksheet = workbook.worksheets[0];
+    if (!worksheet) return { error: 'File is empty' };
 
-    // Sample values for each column (first 5 non-empty)
+    const sheetNames = workbook.worksheets.map(ws => ws.name);
+
+    // Read header row
+    const headerRow = worksheet.getRow(1);
+    const headers = [];
+    headerRow.eachCell({ includeEmpty: false }, (cell, colNum) => {
+      const name = cell.value !== null && cell.value !== undefined
+        ? (cell.value.richText ? cell.value.richText.map(r => r.text).join('') : String(cell.value))
+        : `Column ${colNum}`;
+      headers.push({ index: colNum - 1, name: name.trim() || `Column ${colNum}` });
+    });
+
+    if (headers.length === 0) return { error: 'File is empty' };
+
+    const totalRows = worksheet.rowCount - 1;
+
+    // Sample up to 5 unique non-empty values per column
     const samples = {};
-    headers.forEach(h => {
-      const vals = [];
-      for (let r = 1; r < data.length && vals.length < 5; r++) {
-        const v = String(data[r][h.index] ?? '');
-        if (v && !vals.includes(v)) vals.push(v);
-      }
-      samples[h.index] = vals;
+    headers.forEach(h => { samples[h.index] = []; });
+
+    worksheet.eachRow((row, rowNumber) => {
+      if (rowNumber === 1) return;
+      headers.forEach(h => {
+        if (samples[h.index].length >= 5) return;
+        const cell = row.getCell(h.index + 1);
+        if (cell.value === null || cell.value === undefined) return;
+        const v = cell.value.richText
+          ? cell.value.richText.map(r => r.text).join('')
+          : String(cell.value);
+        const trimmed = v.trim();
+        if (trimmed && !samples[h.index].includes(trimmed)) {
+          samples[h.index].push(trimmed);
+        }
+      });
     });
 
     return { headers, totalRows, sheetNames, samples };
@@ -349,14 +381,18 @@ ipcMain.handle('split-file', async (_, { filePath, columnIndex, parameters, outp
 
       const outWs = outWb.addWorksheet(sheetName);
 
-      // Copy column widths and styles
-      worksheet.columns.forEach((col, i) => {
-        if (!col) return;
-        const outCol = outWs.getColumn(i + 1);
-        if (col.width)  outCol.width  = col.width;
-        if (col.hidden) outCol.hidden = col.hidden;
-        if (col.style)  outCol.style  = JSON.parse(JSON.stringify(col.style));
-      });
+      // Copy column widths and styles — guard against files with no column definitions
+      try {
+        if (worksheet.columns && worksheet.columns.length) {
+          worksheet.columns.forEach((col, i) => {
+            if (!col) return;
+            const outCol = outWs.getColumn(i + 1);
+            if (col.width)  outCol.width  = col.width;
+            if (col.hidden) outCol.hidden = col.hidden;
+            if (col.style)  outCol.style  = JSON.parse(JSON.stringify(col.style));
+          });
+        }
+      } catch(e) {}
 
       // Build mapping: source row number -> destination row number
       // Header (row 1 in source) -> row 1 in dest
@@ -372,11 +408,6 @@ ipcMain.handle('split-file', async (_, { filePath, columnIndex, parameters, outp
       if (merges && merges.length) {
         merges.forEach(mergeRange => {
           try {
-            // mergeRange is like "A1:C1"
-            const decoded = ExcelJS.utils
-              ? null // not available this way
-              : null;
-            // Parse manually
             const match = mergeRange.match(/^([A-Z]+)(\d+):([A-Z]+)(\d+)$/);
             if (!match) return;
             const srcStartRow = parseInt(match[2]);
