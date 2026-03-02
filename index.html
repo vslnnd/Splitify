@@ -747,10 +747,8 @@
       border: 1px solid var(--border);
       border-radius: var(--radius);
       padding: 10px;
-      max-height: 180px;
-      overflow-y: auto;
+      overflow-y: visible;
       flex-shrink: 0;
-      margin: 0 16px 8px;
     }
 
     #log-area.visible {
@@ -793,17 +791,25 @@
     }
 
     .log-result-bar {
-      display: flex;
+      display: none; /* no longer used for open folder */
+    }
+
+    #split-result-bar {
+      display: none;
       align-items: center;
       justify-content: space-between;
-      padding: 8px 12px;
+      padding: 9px 12px;
       background: var(--accent-dim2);
       border: 1px solid rgba(184, 242, 160, 0.15);
       border-radius: var(--radius);
-      margin-top: 2px;
+      flex-shrink: 0;
     }
 
-    .log-result-bar span {
+    #split-result-bar.visible {
+      display: flex;
+    }
+
+    #split-result-bar span {
       font-size: 12px;
       color: var(--accent);
       font-weight: 700;
@@ -1767,7 +1773,7 @@
           </div>
         </div>
 
-        <!-- MIDDLE: scrollable queue -->
+        <!-- MIDDLE: scrollable queue + result bar + logs all scroll together -->
         <div id="split-scroll">
           <!-- Queue -->
           <div id="queue-section">
@@ -1783,10 +1789,16 @@
             </div>
             <div id="queue-list"></div>
           </div>
-        </div>
 
-        <!-- LOG: separated from queue, above bottom bar -->
-        <div id="log-area"></div>
+          <!-- Result bar: shows after split with file count + Open Folder -->
+          <div id="split-result-bar">
+            <span id="split-result-label">✓ 0 files created</span>
+            <button class="btn btn-accent" style="font-size:11px;padding:4px 10px" id="open-folder-btn">Open Folder ↗</button>
+          </div>
+
+          <!-- LOG: inside scroll area, expands downward naturally -->
+          <div id="log-area"></div>
+        </div>
 
         <!-- BOTTOM: always visible, sticky -->
         <div id="split-bottom" style="display:none">
@@ -2265,7 +2277,7 @@
       }
     }
 
-    document.getElementById('column-select').addEventListener('change', function () {
+    on('column-select', 'change', function () {
       const idx = this.value;
       const firstItem = queue.find(q => q.samples);
       if (idx !== '' && firstItem) showColumnSamples(parseInt(idx), firstItem.samples);
@@ -2274,7 +2286,7 @@
       updateSplitBtn();
     });
 
-    document.getElementById('profile-select').addEventListener('change', () => {
+    on('profile-select', 'change', () => {
       recomputeAllPreviews();
       updateSplitBtn();
     });
@@ -2391,7 +2403,7 @@
       cb.indeterminate = selectable.some(q => q.selected) && !selectable.every(q => q.selected);
     }
 
-    document.getElementById('select-all-cb').addEventListener('change', function () {
+    on('select-all-cb', 'change', function () {
       queue.forEach(item => {
         if (item.status !== 'processing' && item.status !== 'done') {
           item.selected = this.checked;
@@ -2402,7 +2414,7 @@
       updateSplitBtn();
     });
 
-    document.getElementById('clear-done-btn').addEventListener('click', () => {
+    on('clear-done-btn', 'click', () => {
       queue = queue.filter(q => q.status !== 'done');
       document.getElementById('queue-list').innerHTML = '';
       queue.forEach(item => renderQueueItem(item));
@@ -2417,6 +2429,7 @@
       document.getElementById('queue-section').classList.remove('visible');
       document.getElementById('split-bottom').style.display = 'none';
       document.getElementById('log-area').classList.remove('visible');
+      document.getElementById('split-result-bar').classList.remove('visible');
       document.getElementById('column-select').innerHTML = '<option value="">— select column —</option>';
       document.getElementById('column-samples').innerHTML = '';
     }
@@ -2431,7 +2444,7 @@
     // ═══════════════════════════════════════════
     //  OUTPUT
     // ═══════════════════════════════════════════
-    document.getElementById('browse-output-btn').addEventListener('click', async () => {
+    on('browse-output-btn', 'click', async () => {
       const folder = await window.splitify.pickFolder();
       if (folder) {
         outputDir = folder;
@@ -2440,19 +2453,19 @@
       }
     });
 
-    document.getElementById('custom-prefix-toggle').addEventListener('change', function () {
+    on('custom-prefix-toggle', 'change', function () {
       const inp = document.getElementById('custom-prefix');
       inp.style.display = this.checked ? '' : 'none';
       if (this.checked) inp.focus();
       recomputeAllPreviews();
     });
 
-    document.getElementById('custom-prefix').addEventListener('input', recomputeAllPreviews);
+    on('custom-prefix', 'input', recomputeAllPreviews);
 
     // ═══════════════════════════════════════════
     //  SPLIT
     // ═══════════════════════════════════════════
-    document.getElementById('split-btn').addEventListener('click', doSplitQueue);
+    on('split-btn', 'click', doSplitQueue);
 
     async function doSplitQueue() {
       if (isProcessing) return;
@@ -2473,6 +2486,7 @@
       const parameters = profile ? profile.parameters : [];
 
       showLog(); clearLog();
+      document.getElementById('split-result-bar').classList.remove('visible');
 
       const toProcess = queue.filter(q => q.selected && (q.status === 'ready' || q.status === 'waiting'));
       log('head', `Processing ${toProcess.length} file${toProcess.length !== 1 ? 's' : ''}...`);
@@ -2513,16 +2527,15 @@
           if (result.skipped.length) log('warn', `  Skipped: ${result.skipped.join(', ')}`);
           totalCreated += result.created.length;
 
-          // Add open folder button for first done file
+          // Show result bar with file count + Open Folder button
           if (totalCreated === result.created.length) {
-            const bar = document.createElement('div');
-            bar.className = 'log-result-bar';
-            bar.innerHTML = `<span>✓ ${totalCreated} file${totalCreated !== 1 ? 's' : ''} created</span>
-          <button class="btn btn-accent" style="font-size:11px;padding:4px 10px" id="open-folder-btn">Open Folder ↗</button>`;
-            document.getElementById('log-area').appendChild(bar);
-            document.getElementById('open-folder-btn').addEventListener('click', () => {
+            const bar = document.getElementById('split-result-bar');
+            document.getElementById('split-result-label').textContent =
+              `✓ ${totalCreated} file${totalCreated !== 1 ? 's' : ''} created`;
+            bar.classList.add('visible');
+            document.getElementById('open-folder-btn').onclick = () => {
               window.splitify.openFolder(effectiveOutput);
-            });
+            };
           }
         }
         renderQueueItem(item);
@@ -2655,11 +2668,11 @@
       });
     }
 
-    document.getElementById('add-param-btn').addEventListener('click', addParam);
+    on('add-param-btn', 'click', addParam);
     const handleEnter = e => { if (e.key === 'Enter') addParam(); };
-    document.getElementById('new-param-value').addEventListener('keydown', handleEnter);
-    document.getElementById('new-param-label').addEventListener('keydown', handleEnter);
-    document.getElementById('new-param-payable').addEventListener('keydown', handleEnter);
+    on('new-param-value', 'keydown', handleEnter);
+    on('new-param-label', 'keydown', handleEnter);
+    on('new-param-payable', 'keydown', handleEnter);
 
     function addParam() {
       const v = document.getElementById('new-param-value');
@@ -2671,7 +2684,7 @@
       renderParamList();
     }
 
-    document.getElementById('editor-save-btn').addEventListener('click', saveProfile);
+    on('editor-save-btn', 'click', saveProfile);
     function saveProfile() {
       const name = document.getElementById('editor-name').value.trim();
       if (!name) { document.getElementById('editor-name').focus(); return; }
@@ -2687,7 +2700,7 @@
       closeEditor();
     }
 
-    document.getElementById('editor-delete-btn').addEventListener('click', () => { if (editingProfileId) confirmDeleteProfile(editingProfileId); });
+    on('editor-delete-btn', 'click', () => { if (editingProfileId) confirmDeleteProfile(editingProfileId); });
     async function confirmDeleteProfile(id, e) {
       if (e) e.stopPropagation();
       const p = profiles.find(x => x.id === id);
@@ -2711,16 +2724,16 @@
       populateProfileSelect();
     }
 
-    document.getElementById('new-profile-btn').addEventListener('click', newProfile);
-    document.getElementById('editor-close-btn').addEventListener('click', closeEditor);
-    document.getElementById('editor-modal-overlay').addEventListener('click', e => { if (e.target === document.getElementById('editor-modal-overlay')) closeEditor(); });
+    on('new-profile-btn', 'click', newProfile);
+    on('editor-close-btn', 'click', closeEditor);
+    on('editor-modal-overlay', 'click', e => { if (e.target === document.getElementById('editor-modal-overlay')) closeEditor(); });
 
     // ── Import modal ──
-    document.getElementById('import-btn').addEventListener('click', () => { document.getElementById('import-textarea').value = ''; document.getElementById('modal-overlay').classList.add('open'); });
-    document.getElementById('modal-close').addEventListener('click', () => document.getElementById('modal-overlay').classList.remove('open'));
-    document.getElementById('modal-cancel').addEventListener('click', () => document.getElementById('modal-overlay').classList.remove('open'));
-    document.getElementById('modal-overlay').addEventListener('click', e => { if (e.target === document.getElementById('modal-overlay')) document.getElementById('modal-overlay').classList.remove('open'); });
-    document.getElementById('modal-import').addEventListener('click', () => {
+    on('import-btn', 'click', () => { document.getElementById('import-textarea').value = ''; document.getElementById('modal-overlay').classList.add('open'); });
+    on('modal-close', 'click', () => document.getElementById('modal-overlay').classList.remove('open'));
+    on('modal-cancel', 'click', () => document.getElementById('modal-overlay').classList.remove('open'));
+    on('modal-overlay', 'click', e => { if (e.target === document.getElementById('modal-overlay')) document.getElementById('modal-overlay').classList.remove('open'); });
+    on('modal-import', 'click', () => {
       const lines = document.getElementById('import-textarea').value.split('\n').map(l => l.trim()).filter(Boolean);
       lines.forEach(line => {
         const excl = line.startsWith('!');
@@ -2796,7 +2809,8 @@
         textEl.style.color = 'var(--red)';
       });
 
-      document.getElementById('ub-btn').addEventListener('click', () => window.splitify.installUpdate());
+      const ubBtn = document.getElementById('ub-btn');
+      if (ubBtn) ubBtn.addEventListener('click', () => window.splitify.installUpdate());
     }
 
     // ═══════════════════════════════════════════
@@ -2804,6 +2818,12 @@
     // ═══════════════════════════════════════════
     function escHtml(str) {
       return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    // Safe event binding — silently skips if element doesn't exist
+    function on(id, event, handler) {
+      const el = document.getElementById(id);
+      if (el) el.addEventListener(event, handler);
     }
 
     // ═══════════════════════════════════════════
@@ -2851,13 +2871,13 @@
     });
 
     // Startup check toggle
-    document.getElementById('setting-startup-check').addEventListener('change', function () {
+    on('setting-startup-check', 'change', function () {
       appSettings.checkUpdatesOnStartup = this.checked;
       saveAppSettings();
     });
 
     // Interval select
-    document.getElementById('setting-interval').addEventListener('change', function () {
+    on('setting-interval', 'change', function () {
       appSettings.updateIntervalHours = parseInt(this.value);
       saveAppSettings();
     });
@@ -2866,7 +2886,7 @@
 
 
     // Check for updates button
-    document.getElementById('check-updates-btn').addEventListener('click', async () => {
+    on('check-updates-btn', 'click', async () => {
       const btn = document.getElementById('check-updates-btn');
       const statusRow = document.getElementById('update-status-row');
       const statusLabel = document.getElementById('update-status-label');
@@ -2898,7 +2918,7 @@
     });
 
     // Feedback
-    document.getElementById('feedback-email-btn').addEventListener('click', () => {
+    on('feedback-email-btn', 'click', () => {
       const textEl = document.getElementById('feedback-text');
       const text = textEl.value.trim();
       const btn = document.getElementById('feedback-email-btn');
@@ -2932,14 +2952,14 @@
       }, 3000);
     });
 
-    document.getElementById('feedback-github-btn').addEventListener('click', () => {
+    on('feedback-github-btn', 'click', () => {
       const text = document.getElementById('feedback-text').value.trim();
       const title = encodeURIComponent('Feedback / Bug Report');
       const body = encodeURIComponent(text || '');
       window.splitify.openExternal(`https://github.com/vslnnd/Splitify/issues/new?title=${title}&body=${body}`);
     });
 
-    document.getElementById('github-btn').addEventListener('click', () => {
+    on('github-btn', 'click', () => {
       window.splitify.openExternal('https://github.com/vslnnd/Splitify');
     });
 
@@ -2985,7 +3005,7 @@
     // ═══════════════════════════════════════════
     //  PROFILES IMPORT / EXPORT
     // ═══════════════════════════════════════════
-    document.getElementById('export-profiles-btn').addEventListener('click', async () => {
+    on('export-profiles-btn', 'click', async () => {
       const data = JSON.stringify(profiles, null, 2);
       const blob = new Blob([data], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
@@ -2997,11 +3017,11 @@
       URL.revokeObjectURL(url);
     });
 
-    document.getElementById('import-profiles-btn').addEventListener('click', () => {
+    on('import-profiles-btn', 'click', () => {
       document.getElementById('import-profiles-input').click();
     });
 
-    document.getElementById('import-profiles-input').addEventListener('change', async function () {
+    on('import-profiles-input', 'change', async function () {
       const file = this.files[0];
       if (!file) return;
       const mode = document.getElementById('import-mode').value;
@@ -3143,9 +3163,9 @@
       }
     }
 
-    document.getElementById('refresh-history-btn').addEventListener('click', renderHistory);
+    on('refresh-history-btn', 'click', renderHistory);
 
-    document.getElementById('clear-history-btn').addEventListener('click', async () => {
+    on('clear-history-btn', 'click', async () => {
       const res = await window.splitify.showMessageBox({
         type: 'warning',
         buttons: ['Cancel', 'Clear All'],
@@ -3162,6 +3182,15 @@
     // ═══════════════════════════════════════════
     //  PATCH NOTES MODAL
     // ═══════════════════════════════════════════
+    // Converts a subset of markdown to safe HTML: **bold**, *italic*, `code`
+    function renderMd(str) {
+      return String(str)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+        .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+        .replace(/\*([^*]+)\*/g, '<em>$1</em>')
+        .replace(/`([^`]+)`/g, '<code style="font-family:var(--mono);font-size:11px;background:var(--bg3);padding:1px 4px;border-radius:3px">$1</code>');
+    }
+
     function parsePatchNotes(raw) {
       // Parse +new, +improved, +fixed prefixed lines
       // Falls back to showing raw text if no prefixes found
@@ -3206,7 +3235,7 @@
           parsed[key].forEach(text => {
             const item = document.createElement('div');
             item.className = 'pn-item';
-            item.innerHTML = '<div class="pn-dot ' + dotClass + '"></div><div class="pn-text">' + escHtml(text) + '</div>';
+            item.innerHTML = '<div class="pn-dot ' + dotClass + '"></div><div class="pn-text">' + renderMd(text) + '</div>';
             body.appendChild(item);
           });
         });
@@ -3228,7 +3257,7 @@
       document.getElementById('patchnotes-overlay').classList.add('open');
     }
 
-    document.getElementById('patchnotes-btn').addEventListener('click', () => {
+    on('patchnotes-btn', 'click', () => {
       document.getElementById('patchnotes-overlay').classList.remove('open');
     });
 
