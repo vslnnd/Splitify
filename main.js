@@ -5,9 +5,10 @@ const fs = require('fs');
 const https = require('https');
 const ExcelJS = require('exceljs');
 
-const PROFILES_PATH = path.join(app.getPath('userData'), 'splitify_profiles.json');
-const SETTINGS_PATH = path.join(app.getPath('userData'), 'splitify_settings.json');
-const HISTORY_PATH = path.join(app.getPath('userData'), 'splitify_history.json');
+const PROFILES_PATH   = path.join(app.getPath('userData'), 'splitify_profiles.json');
+const SETTINGS_PATH   = path.join(app.getPath('userData'), 'splitify_settings.json');
+const HISTORY_PATH    = path.join(app.getPath('userData'), 'splitify_history.json');
+const FAVFOLDERS_PATH = path.join(app.getPath('userData'), 'splitify_favfolders.json');
 
 const DEFAULT_SETTINGS = {
   theme: 'dark',
@@ -550,4 +551,26 @@ ipcMain.handle('clear-history', () => saveHistory([]));
 
 ipcMain.handle('fetch-release-notes', async (_, version) => {
   return new Promise(resolve => fetchReleaseNotes(version, resolve));
+});
+
+// ─── Favorite Folders ─────────────────────────────────────────────────────────
+function loadFavFolders() {
+  try {
+    if (fs.existsSync(FAVFOLDERS_PATH)) return JSON.parse(fs.readFileSync(FAVFOLDERS_PATH, 'utf8'));
+  } catch(e) {}
+  return [];
+}
+function saveFavFolders(folders) {
+  try { fs.writeFileSync(FAVFOLDERS_PATH, JSON.stringify(folders, null, 2)); return true; }
+  catch(e) { return false; }
+}
+
+ipcMain.handle('get-fav-folders',   ()          => loadFavFolders());
+ipcMain.handle('add-fav-folder',    (_, folder) => {
+  const list = loadFavFolders();
+  if (!list.includes(folder)) list.unshift(folder);
+  return saveFavFolders(list);
+});
+ipcMain.handle('remove-fav-folder', (_, folder) => {
+  return saveFavFolders(loadFavFolders().filter(f => f !== folder));
 });

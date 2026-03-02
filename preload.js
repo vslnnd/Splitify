@@ -37,4 +37,9 @@ contextBridge.exposeInMainWorld('splitify', {
   // Patch notes
   onFirstLaunchAfterUpdate: (cb) => ipcRenderer.on('first-launch-after-update', (_, data) => cb(data)),
   fetchReleaseNotes: (version) => ipcRenderer.invoke('fetch-release-notes', version),
+
+  // Favorite Folders
+  getFavFolders:   ()       => ipcRenderer.invoke('get-fav-folders'),
+  addFavFolder:    (folder) => ipcRenderer.invoke('add-fav-folder', folder),
+  removeFavFolder: (folder) => ipcRenderer.invoke('remove-fav-folder', folder),
 });
