@@ -2,6 +2,7 @@ const { app, BrowserWindow, ipcMain, dialog, shell } = require('electron');
 const { autoUpdater } = require('electron-updater');
 const path = require('path');
 const fs = require('fs');
+const https = require('https');
 const ExcelJS = require('exceljs');
 
 const PROFILES_PATH = path.join(app.getPath('userData'), 'splitify_profiles.json');
@@ -41,7 +42,30 @@ function saveHistory(history) {
   catch (e) { return false; }
 }
 
-// ─── Default SElectric Profile ────────────────────────────────────────────────
+// ─── Fetch release notes from GitHub ─────────────────────────────────────────
+function fetchReleaseNotes(version, cb) {
+  const options = {
+    hostname: 'api.github.com',
+    path: `/repos/vslnnd/Splitify/releases/tags/v${version}`,
+    method: 'GET',
+    headers: {
+      'User-Agent': 'Splitify-App',
+      'Accept': 'application/vnd.github.v3+json'
+    }
+  };
+  const req = https.request(options, (res) => {
+    let raw = '';
+    res.on('data', chunk => raw += chunk);
+    res.on('end', () => {
+      try {
+        const data = JSON.parse(raw);
+        cb(data.body || '');
+      } catch(e) { cb(''); }
+    });
+  });
+  req.on('error', () => cb(''));
+  req.end();
+}
 const DEFAULT_PROFILES = [
   {
     id: 'selectric_' + Date.now(),
@@ -120,7 +144,28 @@ function createWindow() {
   mainWindow.loadFile('index.html');
   mainWindow.setMenu(null);
   mainWindow.webContents.on('did-finish-load', () => {
-    mainWindow.webContents.send('app-version', app.getVersion());
+    const currentVersion = app.getVersion();
+    mainWindow.webContents.send('app-version', currentVersion);
+
+    // Check if this is the first launch after an update
+    const s = loadSettings();
+    if (s.lastSeenVersion && s.lastSeenVersion !== currentVersion) {
+      const prevVersion = s.lastSeenVersion;
+      // Fetch patch notes from GitHub release, then show modal
+      fetchReleaseNotes(currentVersion, (notes) => {
+        setTimeout(() => {
+          if (mainWindow) mainWindow.webContents.send('first-launch-after-update', {
+            prevVersion,
+            newVersion: currentVersion,
+            notes: notes || ''
+          });
+        }, 800);
+      });
+    }
+    if (s.lastSeenVersion !== currentVersion) {
+      s.lastSeenVersion = currentVersion;
+      saveSettings(s);
+    }
   });
 }
 
@@ -502,3 +547,7 @@ ipcMain.handle('add-history-entry', (_, entry) => {
   return saveHistory(h);
 });
 ipcMain.handle('clear-history', () => saveHistory([]));
+
+ipcMain.handle('fetch-release-notes', async (_, version) => {
+  return new Promise(resolve => fetchReleaseNotes(version, resolve));
+});

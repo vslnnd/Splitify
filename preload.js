@@ -16,7 +16,7 @@ contextBridge.exposeInMainWorld('splitify', {
   // Auto-updater
   installUpdate: () => ipcRenderer.invoke('install-update'),
   onUpdateAvailable: (cb) => ipcRenderer.on('update-available', (_, version) => cb(version)),
-  onUpdateProgress: (cb) => ipcRenderer.on('update-progress', (_, progress) => cb(progress)),
+  onUpdateProgress: (cb) => ipcRenderer.on('update-progress', (_, percent) => cb(percent)),
   onUpdateDownloaded: (cb) => ipcRenderer.on('update-downloaded', () => cb()),
   onUpdateChecking: (cb) => ipcRenderer.on('update-checking', () => cb()),
   onUpdateNotAvailable: (cb) => ipcRenderer.on('update-not-available', (_, v) => cb(v)),
@@ -33,4 +33,8 @@ contextBridge.exposeInMainWorld('splitify', {
   getHistory: () => ipcRenderer.invoke('get-history'),
   addHistoryEntry: (entry) => ipcRenderer.invoke('add-history-entry', entry),
   clearHistory: () => ipcRenderer.invoke('clear-history'),
+
+  // Patch notes
+  onFirstLaunchAfterUpdate: (cb) => ipcRenderer.on('first-launch-after-update', (_, data) => cb(data)),
+  fetchReleaseNotes: (version) => ipcRenderer.invoke('fetch-release-notes', version),
 });

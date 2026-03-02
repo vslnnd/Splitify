@@ -24,47 +24,81 @@ rl.question('New version (e.g. 1.1.0): ', (version) => {
   rl.question(`Describe what changed (for commit message): `, (desc) => {
     desc = desc.trim() || 'update';
 
-    rl.question(`Patch notes (shown to users in the app): `, (notes) => {
-      notes = notes.trim() || desc;
-      rl.close();
+    // ── Open Notepad for patch notes ──────────────────────────────────────────
+    const os = require('os');
+    const tmpFile = path.join(os.tmpdir(), `splitify-notes-v${version}.txt`);
+    const template = [
+      `# Patch notes for v${version} — delete these lines before saving`,
+      `# Prefix each note with +new, +improved, or +fixed`,
+      `#`,
+      `# Examples:`,
+      `#   +new Dark mode added`,
+      `#   +improved Faster file splitting`,
+      `#   +fixed Crash on empty files`,
+      `# ──────────────────────────────────────────────────────────────`,
+      ``
+    ].join('\n');
 
-      console.log(`\n📦 Releasing v${version} — "${desc}"\n`);
+    fs.writeFileSync(tmpFile, template, 'utf8');
+    console.log('\n📝 Notepad is opening — write your patch notes, save, and close it...');
 
-      try {
-        // 1. Update version in package.json
-        pkg.version = version;
-        fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n');
-        console.log(`✓ Updated package.json to v${version}`);
+    try {
+      execSync(`notepad.exe "${tmpFile}"`, { stdio: 'inherit' });
+    } catch(e) { /* Notepad sometimes exits non-zero, safe to ignore */ }
 
-        // 2. Git add all
-        execSync('git add .', { stdio: 'inherit' });
-        console.log('✓ git add .');
+    const raw = fs.existsSync(tmpFile) ? fs.readFileSync(tmpFile, 'utf8') : '';
+    try { fs.unlinkSync(tmpFile); } catch(e) {}
 
-        // 3. Git commit
-        execSync(`git commit -m "v${version} - ${desc}"`, { stdio: 'inherit' });
-        console.log(`✓ git commit`);
+    const notes = raw
+      .split('\n')
+      .filter(l => !l.trim().startsWith('#'))
+      .join('\n')
+      .trim() || desc;
 
-        // 4. Git push
-        execSync('git push', { stdio: 'inherit' });
-        console.log('✓ git push');
+    if (notes === desc) {
+      console.log('⚠  No patch notes entered — using commit message as fallback');
+    } else {
+      console.log('✓  Patch notes captured');
+    }
 
-        // 5. Build + publish
-        console.log('\n🔨 Building and publishing to GitHub...\n');
-        execSync('npm run electron:build', { stdio: 'inherit' });
+    rl.close();
 
-        console.log(`\n✅ v${version} released successfully!`);
+    console.log(`\n📦 Releasing v${version} — "${desc}"\n`);
 
-        // 6. Clean up old installers from dist/ — only after new one confirmed present
-        cleanupDist(version);
+    try {
+      // 1. Update version in package.json
+      pkg.version = version;
+      fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n');
+      console.log(`✓ Updated package.json to v${version}`);
 
-        // 7. Upload patch notes to GitHub release body
-        uploadPatchNotes(version, notes);
+      // 2. Git add all
+      execSync('git add .', { stdio: 'inherit' });
+      console.log('✓ git add .');
 
-      } catch (err) {
-        console.error('\n❌ Release failed:', err.message);
-        process.exit(1);
-      }
-    });
+      // 3. Git commit
+      execSync(`git commit -m "v${version} - ${desc}"`, { stdio: 'inherit' });
+      console.log(`✓ git commit`);
+
+      // 4. Git push
+      execSync('git push', { stdio: 'inherit' });
+      console.log('✓ git push');
+
+      // 5. Build + publish
+      console.log('\n🔨 Building and publishing to GitHub...\n');
+      execSync('npm run electron:build', { stdio: 'inherit' });
+
+      console.log(`\n✅ v${version} released successfully!`);
+
+      // 6. Clean up old installers from dist/ — only after new one confirmed present
+      cleanupDist(version);
+
+      // 7. Upload patch notes to GitHub release body
+      uploadPatchNotes(version, notes);
+
+    } catch (err) {
+      console.error('\n❌ Release failed:', err.message);
+      process.exit(1);
+    }
   });
 });
 
