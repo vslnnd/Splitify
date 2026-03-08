@@ -102,11 +102,20 @@ const DEFAULT_PROFILES = [
 ];
 
 // ─── Profile Storage ──────────────────────────────────────────────────────────
+function normalizeProfiles(list) {
+  return list.map(p => ({
+    ...p,
+    parameters: Array.isArray(p.parameters) ? p.parameters
+              : Array.isArray(p.params)      ? p.params
+              : []
+  }));
+}
+
 function loadProfiles() {
   try {
     if (fs.existsSync(PROFILES_PATH)) {
       const data = JSON.parse(fs.readFileSync(PROFILES_PATH, 'utf8'));
-      return Array.isArray(data) ? data : DEFAULT_PROFILES;
+      return Array.isArray(data) ? normalizeProfiles(data) : DEFAULT_PROFILES;
     }
   } catch (e) { }
   return DEFAULT_PROFILES;

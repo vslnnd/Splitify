@@ -2280,7 +2280,8 @@
       // Build region map — only include regions where at least one value matches
       const regionMap = new Map();
       const excluded = [];
-      profile.parameters.forEach(p => {
+      const profileParams = Array.isArray(profile.parameters) ? profile.parameters : (Array.isArray(profile.params) ? profile.params : []);
+      profileParams.forEach(p => {
         if (p.payable) {
           const key = (p.label && p.label.trim()) ? p.label.trim() : p.value;
           if (!regionMap.has(key)) regionMap.set(key, []);
@@ -2646,7 +2647,7 @@
       const profile = profiles.find(p => p.id === profileId);
       const keepNonMatching = document.getElementById('keep-nonmatching').checked;
       const customPfx = document.getElementById('custom-prefix-toggle').checked ? document.getElementById('custom-prefix').value.trim() : '';
-      const parameters = profile ? profile.parameters : [];
+      const parameters = profile ? (Array.isArray(profile.parameters) ? profile.parameters : (Array.isArray(profile.params) ? profile.params : [])) : [];
 
       showLog(); clearLog();
       document.getElementById('split-result-bar').classList.remove('visible');
@@ -2754,13 +2755,14 @@
         return;
       }
       list.innerHTML = profiles.map(p => {
-        const inc = p.parameters.filter(x => x.payable).length;
-        const exc = p.parameters.filter(x => !x.payable).length;
+        const params = Array.isArray(p.parameters) ? p.parameters : (Array.isArray(p.params) ? p.params : []);
+        const inc = params.filter(x => x.payable).length;
+        const exc = params.filter(x => !x.payable).length;
         return `<div class="profile-item" data-id="${p.id}">
       <div class="profile-dot"></div>
       <div class="profile-info">
         <div class="profile-name">${escHtml(p.name)}</div>
-        <div class="profile-meta">${inc} included · ${exc} excluded · ${p.parameters.length} total</div>
+        <div class="profile-meta">${inc} included · ${exc} excluded · ${params.length} total</div>
       </div>
       <div class="profile-actions">
         <button class="btn btn-ghost" style="font-size:11px;padding:4px 8px" onclick="editProfile('${p.id}')">Edit</button>
@@ -2777,7 +2779,7 @@
       const profile = profiles.find(p => p.id === id);
       if (!profile) return;
       editingProfileId = id;
-      editingParams = JSON.parse(JSON.stringify(profile.parameters));
+      editingParams = JSON.parse(JSON.stringify(Array.isArray(profile.parameters) ? profile.parameters : (Array.isArray(profile.params) ? profile.params : [])));
       document.getElementById('editor-title').textContent = 'Edit Profile';
       document.getElementById('editor-name').value = profile.name;
       document.getElementById('editor-desc').value = profile.description || '';
