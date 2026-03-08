@@ -2021,10 +2021,6 @@
               <div class="settings-row-sub">Load profiles from a .json backup file</div>
             </div>
             <div class="settings-row-right">
-              <select class="select" id="import-mode" style="width:110px;font-size:11px">
-                <option value="merge">Merge</option>
-                <option value="replace">Replace all</option>
-              </select>
               <button class="btn btn-accent" id="import-profiles-btn">Import ↑</button>
             </div>
           </div>
@@ -3191,49 +3187,45 @@
     on('import-profiles-input', 'change', async function () {
       const file = this.files[0];
       if (!file) return;
-      const mode = document.getElementById('import-mode').value;
 
       try {
         const text = await file.text();
         const imported = JSON.parse(text);
         if (!Array.isArray(imported)) {
-          await window.splitify.showMessageBox({ type: 'error', title: 'Import Error', message: 'Invalid profiles file. Please select a valid JSON backup file.' });
-          return;
+          await window.splitify.showMessageBox({ type: 'error', title: 'Import Error', message: 'Invalid file format.', detail: 'Expected a JSON array of profiles.' });
+          this.value = ''; return;
         }
 
-        if (mode === 'replace') {
-          const res = await window.splitify.showMessageBox({
-            type: 'warning',
-            buttons: ['Cancel', 'Replace All existing Profiles'],
-            title: 'Confirm Replace',
-            message: `Replace all ${profiles.length} existing profiles with ${imported.length} imported profiles?`,
-            detail: 'Your current profiles will be completely overwritten.'
-          });
-          if (res !== 1) { this.value = ''; return; }
-          profiles = imported;
-        } else {
-          // Merge: skip profiles with same name
-          let added = 0;
-          imported.forEach(p => {
-            if (!profiles.find(x => x.name === p.name)) {
-              profiles.push({ ...p, id: 'p_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4) });
-              added++;
-            }
-          });
-          await window.splitify.showMessageBox({
-            type: 'info',
-            title: 'Import Successful',
-            message: 'Import Complete',
-            detail: `Imported ${added} new profiles (${imported.length - added} skipped — name already exists).`
-          });
-        }
+        // Normalize: support both 'params' and 'parameters' key names
+        const normalized = imported.map(p => ({
+          ...p,
+          id: 'p_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
+          parameters: Array.isArray(p.parameters) ? p.parameters : (Array.isArray(p.params) ? p.params : [])
+        }));
+
+        // Skip profiles whose name already exists
+        let added = 0;
+        normalized.forEach(p => {
+          if (!profiles.find(x => x.name === p.name)) {
+            profiles.push(p);
+            added++;
+          }
+        });
+
+        const skipped = normalized.length - added;
+        await window.splitify.showMessageBox({
+          type: 'info',
+          title: 'Import Complete',
+          message: `${added} profile${added !== 1 ? 's' : ''} imported successfully.`,
+          detail: skipped > 0 ? `${skipped} skipped — name already exists.` : ''
+        });
 
         window.splitify.saveProfiles(profiles);
         renderProfileList();
         populateProfileSelect();
         this.value = '';
       } catch (e) {
-        await window.splitify.showMessageBox({ type: 'error', title: 'Import Failed', message: 'Failed to read file:', detail: e.message });
+        await window.splitify.showMessageBox({ type: 'error', title: 'Import Failed', message: 'Failed to read file.', detail: e.message });
         this.value = '';
       }
     });
