@@ -2765,7 +2765,7 @@
         <div class="profile-meta">${inc} included · ${exc} excluded · ${params.length} total</div>
       </div>
       <div class="profile-actions">
-        <button class="btn btn-ghost" style="font-size:11px;padding:4px 8px" onclick="editProfile('${p.id}')">Edit</button>
+        <button class="btn btn-ghost" style="font-size:11px;padding:4px 8px" onclick="exportProfile('${p.id}',event)">Export ↓</button>
         <button class="btn btn-danger" style="font-size:11px;padding:4px 8px" onclick="confirmDeleteProfile('${p.id}',event)">Delete</button>
       </div>
     </div>`;
@@ -2773,6 +2773,19 @@
       list.querySelectorAll('.profile-item').forEach(el => {
         el.addEventListener('click', e => { if (e.target.closest('.profile-actions')) return; editProfile(el.dataset.id); });
       });
+    }
+
+    function exportProfile(id, e) {
+      e.stopPropagation();
+      const profile = profiles.find(p => p.id === id);
+      if (!profile) return;
+      const blob = new Blob([JSON.stringify([profile], null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${profile.name.replace(/[/\\?%*:|"<>]/g, '-')}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
     }
 
     function editProfile(id) {
