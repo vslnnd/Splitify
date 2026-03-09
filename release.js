@@ -138,14 +138,23 @@ function cleanupDist(newVersion) {
   }
 }
 
-function uploadPatchNotes(version, notes) {
+function uploadPatchNotes(version, notes, attempt = 1) {
+  const MAX_ATTEMPTS  = 5;
+  const RETRY_DELAY   = 3000;
   const token = process.env.GH_TOKEN;
   if (!token) { console.log('\n⚠  No GH_TOKEN — patch notes not uploaded'); return; }
 
-  console.log('\n📝 Uploading patch notes to GitHub release...');
+  if (attempt === 1) console.log('\n📝 Uploading patch notes to GitHub release...');
+
   githubRequest('GET', `/repos/vslnnd/Splitify/releases/tags/v${version}`, token, null, (err, release) => {
     if (err || !release || !release.id) {
-      console.log('⚠  Could not find GitHub release — patch notes skipped'); return;
+      if (attempt < MAX_ATTEMPTS) {
+        console.log(`⏳ Release not visible yet — retrying in 3s... (${attempt}/${MAX_ATTEMPTS})`);
+        setTimeout(() => uploadPatchNotes(version, notes, attempt + 1), RETRY_DELAY);
+      } else {
+        console.log('⚠  Could not find GitHub release after 5 attempts — patch notes skipped');
+      }
+      return;
     }
     githubRequest('PATCH', `/repos/vslnnd/Splitify/releases/${release.id}`, token, { body: notes }, (err2) => {
       if (err2) console.log('⚠  Failed to upload patch notes:', err2.message);
