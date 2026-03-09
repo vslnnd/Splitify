@@ -127,9 +127,9 @@ let mainWindow;
 function createWindow() {
   mainWindow = new BrowserWindow({
     width: 580,
-    height: 700,
+    height: 760,
     minWidth: 520,
-    minHeight: 600,
+    minHeight: 760,
     resizable: true,
     frame: false,
     titleBarStyle: 'hidden',
