@@ -1,4 +1,4 @@
-const { spawnSync } = require('child_process');
+const { execSync, execFileSync } = require('child_process');
 const readline = require('readline');
 const fs = require('fs');
 const path = require('path');
@@ -24,7 +24,6 @@ rl.question('New version (e.g. 1.1.0): ', (version) => {
   rl.question(`Describe what changed (for commit message): `, (desc) => {
     desc = desc.trim() || 'update';
 
-    // ── Open Notepad for patch notes ──────────────────────────────────────────
     const os = require('os');
     const tmpFile = path.join(os.tmpdir(), `splitify-notes-v${version}.txt`);
     const template = [
@@ -43,7 +42,7 @@ rl.question('New version (e.g. 1.1.0): ', (version) => {
     console.log('\n📝 Notepad is opening — write your patch notes, save, and close it...');
 
     try {
-      spawnSync('notepad.exe', [tmpFile], { stdio: 'inherit' });
+      execSync(`notepad.exe "${tmpFile}"`, { stdio: 'inherit' });
     } catch(e) { /* Notepad sometimes exits non-zero, safe to ignore */ }
 
     const raw = fs.existsSync(tmpFile) ? fs.readFileSync(tmpFile, 'utf8') : '';
@@ -66,33 +65,25 @@ rl.question('New version (e.g. 1.1.0): ', (version) => {
     console.log(`\n📦 Releasing v${version} — "${desc}"\n`);
 
     try {
-      // 1. Update version in package.json
       pkg.version = version;
       fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n');
       console.log(`✓ Updated package.json to v${version}`);
 
-      // 2. Git add all
-      spawnSync('git', ['add', '.'], { stdio: 'inherit' });
+      execSync('git add .', { stdio: 'inherit' });
       console.log('✓ git add .');
 
-      // 3. Git commit
-      spawnSync('git', ['commit', '-m', `v${version} - ${desc}`], { stdio: 'inherit' });
+      execFileSync('git', ['commit', '-m', `v${version} - ${desc}`], { stdio: 'inherit' });
       console.log(`✓ git commit`);
 
-      // 4. Git push
-      spawnSync('git', ['push'], { stdio: 'inherit' });
+      execSync('git push', { stdio: 'inherit' });
       console.log('✓ git push');
 
-      // 5. Build + publish
       console.log('\n🔨 Building and publishing to GitHub...\n');
-      spawnSync('npm.cmd', ['run', 'electron:build'], { stdio: 'inherit' });
+      execSync('npm run electron:build', { stdio: 'inherit' });
 
       console.log(`\n✅ v${version} released successfully!`);
 
-      // 6. Clean up old installers from dist/ — only after new one confirmed present
       cleanupDist(version);
-
-      // 7. Upload patch notes to GitHub release body
       uploadPatchNotes(version, notes);
 
     } catch (err) {
@@ -109,7 +100,6 @@ function cleanupDist(newVersion) {
   const newExe      = `Splitify Setup ${newVersion}.exe`;
   const newBlockmap = `Splitify Setup ${newVersion}.exe.blockmap`;
 
-  // Safety check: only clean if the new installer actually exists
   if (!fs.existsSync(path.join(distDir, newExe))) {
     console.log('\n⚠  New installer not found in dist/ — skipping cleanup.');
     return;
@@ -139,8 +129,8 @@ function cleanupDist(newVersion) {
 }
 
 function uploadPatchNotes(version, notes, attempt = 1) {
-  const MAX_ATTEMPTS  = 5;
-  const RETRY_DELAY   = 3000;
+  const MAX_ATTEMPTS = 5;
+  const RETRY_DELAY  = 4000;
   const token = process.env.GH_TOKEN;
   if (!token) { console.log('\n⚠  No GH_TOKEN — patch notes not uploaded'); return; }
 
@@ -149,7 +139,7 @@ function uploadPatchNotes(version, notes, attempt = 1) {
   githubRequest('GET', `/repos/vslnnd/Splitify/releases/tags/v${version}`, token, null, (err, release) => {
     if (err || !release || !release.id) {
       if (attempt < MAX_ATTEMPTS) {
-        console.log(`⏳ Release not visible yet — retrying in 3s... (${attempt}/${MAX_ATTEMPTS})`);
+        console.log(`⏳ Release not visible yet — retrying in 4s... (${attempt}/${MAX_ATTEMPTS})`);
         setTimeout(() => uploadPatchNotes(version, notes, attempt + 1), RETRY_DELAY);
       } else {
         console.log('⚠  Could not find GitHub release after 5 attempts — patch notes skipped');
