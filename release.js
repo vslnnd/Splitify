@@ -1,4 +1,4 @@
-const { execSync } = require('child_process');
+const { spawnSync } = require('child_process');
 const readline = require('readline');
 const fs = require('fs');
 const path = require('path');
@@ -43,7 +43,7 @@ rl.question('New version (e.g. 1.1.0): ', (version) => {
     console.log('\n📝 Notepad is opening — write your patch notes, save, and close it...');
 
     try {
-      execSync(`notepad.exe "${tmpFile}"`, { stdio: 'inherit' });
+      spawnSync('notepad.exe', [tmpFile], { stdio: 'inherit' });
     } catch(e) { /* Notepad sometimes exits non-zero, safe to ignore */ }
 
     const raw = fs.existsSync(tmpFile) ? fs.readFileSync(tmpFile, 'utf8') : '';
@@ -72,20 +72,20 @@ rl.question('New version (e.g. 1.1.0): ', (version) => {
       console.log(`✓ Updated package.json to v${version}`);
 
       // 2. Git add all
-      execSync('git add .', { stdio: 'inherit' });
+      spawnSync('git', ['add', '.'], { stdio: 'inherit' });
       console.log('✓ git add .');
 
       // 3. Git commit
-      execSync(`git commit -m "v${version} - ${desc}"`, { stdio: 'inherit' });
+      spawnSync('git', ['commit', '-m', `v${version} - ${desc}`], { stdio: 'inherit' });
       console.log(`✓ git commit`);
 
       // 4. Git push
-      execSync('git push', { stdio: 'inherit' });
+      spawnSync('git', ['push'], { stdio: 'inherit' });
       console.log('✓ git push');
 
       // 5. Build + publish
       console.log('\n🔨 Building and publishing to GitHub...\n');
-      execSync('npm run electron:build', { stdio: 'inherit' });
+      spawnSync('npm.cmd', ['run', 'electron:build'], { stdio: 'inherit' });
 
       console.log(`\n✅ v${version} released successfully!`);
 

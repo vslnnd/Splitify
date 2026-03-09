@@ -102,20 +102,11 @@ const DEFAULT_PROFILES = [
 ];
 
 // ─── Profile Storage ──────────────────────────────────────────────────────────
-function normalizeProfiles(list) {
-  return list.map(p => ({
-    ...p,
-    parameters: Array.isArray(p.parameters) ? p.parameters
-              : Array.isArray(p.params)      ? p.params
-              : []
-  }));
-}
-
 function loadProfiles() {
   try {
     if (fs.existsSync(PROFILES_PATH)) {
       const data = JSON.parse(fs.readFileSync(PROFILES_PATH, 'utf8'));
-      return Array.isArray(data) ? normalizeProfiles(data) : DEFAULT_PROFILES;
+      return Array.isArray(data) ? data : DEFAULT_PROFILES;
     }
   } catch (e) { }
   return DEFAULT_PROFILES;
@@ -529,11 +520,15 @@ ipcMain.handle('split-file', async (_, { filePath, columnIndex, parameters, outp
 
 
 ipcMain.handle('open-folder', (_, folderPath) => {
-  shell.openPath(folderPath);
+  if (typeof folderPath === 'string' && path.isAbsolute(folderPath)) {
+    shell.openPath(folderPath);
+  }
 });
 
 ipcMain.handle('open-file', (_, filePath) => {
-  shell.openPath(filePath);
+  if (typeof filePath === 'string' && path.isAbsolute(filePath)) {
+    shell.openPath(filePath);
+  }
 });
 
 ipcMain.handle('install-update', () => {
@@ -547,7 +542,14 @@ ipcMain.handle('check-for-updates', () => {
     if (mainWindow) mainWindow.webContents.send('update-error', err.message);
   });
 });
-ipcMain.handle('open-external', (_, url) => shell.openExternal(url));
+ipcMain.handle('open-external', (_, url) => {
+  try {
+    const parsed = new URL(url);
+    if (['https:', 'http:', 'mailto:'].includes(parsed.protocol)) {
+      shell.openExternal(url);
+    }
+  } catch (_) {} // invalid URL, do nothing
+});
 
 ipcMain.handle('get-history', () => loadHistory());
 ipcMain.handle('add-history-entry', (_, entry) => {
@@ -559,6 +561,7 @@ ipcMain.handle('add-history-entry', (_, entry) => {
 ipcMain.handle('clear-history', () => saveHistory([]));
 
 ipcMain.handle('fetch-release-notes', async (_, version) => {
+  if (typeof version !== 'string' || !/^\d+\.\d+\.\d+$/.test(version)) return '';
   return new Promise(resolve => fetchReleaseNotes(version, resolve));
 });
 

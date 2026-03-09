@@ -1813,8 +1813,8 @@
     <div id="tabs">
       <div class="tab active" data-tab="split">⚡ Split File</div>
       <div class="tab" data-tab="profiles">◈ Profiles</div>
-      <div class="tab" data-tab="history">◷ History</div>
       <div class="tab" data-tab="settings">⚙ Settings</div>
+      <div class="tab" data-tab="history">◷ History</div>
     </div>
 
     <!-- ════════════ SPLIT TAB ════════════ -->
@@ -1925,13 +1925,8 @@
       <div id="profiles-panel">
         <div class="panel-toolbar">
           <span>Manage Profiles</span>
-          <div style="display:flex;gap:8px">
-            <button class="btn btn-ghost" id="import-profiles-btn">Import ↑</button>
-            <button class="btn btn-ghost" id="export-profiles-btn">Export All ↓</button>
-            <button class="btn btn-accent" id="new-profile-btn">+ New Profile</button>
-          </div>
+          <button class="btn btn-accent" id="new-profile-btn">+ New Profile</button>
         </div>
-        <input type="file" id="import-profiles-input" accept=".json" multiple style="display:none">
         <div id="profile-list"></div>
       </div>
     </div>
@@ -2007,6 +2002,31 @@
           </div>
         </div>
 
+        <!-- Import / Export Profiles -->
+        <div class="settings-section">
+          <div class="settings-section-title">Profiles — Import / Export</div>
+
+          <div class="settings-row">
+            <div class="settings-row-info">
+              <div class="settings-row-label">Export All Profiles</div>
+              <div class="settings-row-sub">Save all profiles to a .json backup file</div>
+            </div>
+            <div class="settings-row-right"><button class="btn btn-accent" id="export-profiles-btn">Export ↓</button>
+            </div>
+          </div>
+
+          <div class="settings-row">
+            <div class="settings-row-info">
+              <div class="settings-row-label">Import Profiles</div>
+              <div class="settings-row-sub">Load profiles from a .json backup file</div>
+            </div>
+            <div class="settings-row-right">
+              <button class="btn btn-accent" id="import-profiles-btn">Import ↑</button>
+            </div>
+          </div>
+          <input type="file" id="import-profiles-input" accept=".json" style="display:none">
+        </div>
+
         <!-- Feedback section -->
         <div class="settings-section">
           <div class="settings-section-title">Feedback</div>
@@ -2018,8 +2038,7 @@
               placeholder="Describe your feedback, bug report, or feature request..."
               style="resize:vertical;font-size:12px;line-height:1.6;font-weight:400"></textarea>
             <div style="display:flex;gap:8px;justify-content:flex-end">
-              <button class="btn btn-ghost" id="feedback-github-btn">Open GitHub Issue ↗</button>
-              <button class="btn btn-accent" id="feedback-email-btn">Send via Email</button>
+              <button class="btn btn-accent" id="feedback-github-btn">Open GitHub Issue ↗</button>
             </div>
           </div>
         </div>
@@ -3076,40 +3095,6 @@
     });
 
     // Feedback
-    on('feedback-email-btn', 'click', () => {
-      const textEl = document.getElementById('feedback-text');
-      const text = textEl.value.trim();
-      const btn = document.getElementById('feedback-email-btn');
-
-      if (!text) {
-        textEl.classList.add('invalid-shake');
-        textEl.setAttribute('placeholder', 'Please enter your feedback before sending...');
-        textEl.focus();
-        setTimeout(() => { textEl.classList.remove('invalid-shake'); }, 500);
-        return;
-      }
-
-      const version = document.getElementById('app-version')?.textContent || 'unknown';
-      const subject = encodeURIComponent(`Splitify Feedback (${version})`);
-      const body = encodeURIComponent(`${text}\n\n---\nSplitify ${version}`);
-      window.splitify.openExternal(`mailto:nvasiljevic42@gmail.com?subject=${subject}&body=${body}`);
-
-      // Show confirmation
-      const originalText = btn.textContent;
-      btn.textContent = '✓ Email Client Opened';
-      btn.style.background = 'rgba(120,232,96,0.25)';
-      btn.style.borderColor = 'var(--accent2)';
-      btn.style.color = 'var(--accent2)';
-      textEl.value = '';
-
-      setTimeout(() => {
-        btn.textContent = originalText;
-        btn.style.background = '';
-        btn.style.borderColor = '';
-        btn.style.color = '';
-      }, 3000);
-    });
-
     on('feedback-github-btn', 'click', () => {
       const text = document.getElementById('feedback-text').value.trim();
       const title = encodeURIComponent('Feedback / Bug Report');
@@ -3180,50 +3165,49 @@
     });
 
     on('import-profiles-input', 'change', async function () {
-      if (!this.files.length) return;
+      const file = this.files[0];
+      if (!file) return;
 
-      let totalAdded = 0, totalSkipped = 0, totalErrors = 0;
-
-      for (const file of Array.from(this.files)) {
-        try {
-          const text = await file.text();
-          const imported = JSON.parse(text);
-          if (!Array.isArray(imported)) { totalErrors++; continue; }
-
-          imported.forEach(p => {
-            const normalized = {
-              ...p,
-              id: 'p_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
-              parameters: Array.isArray(p.parameters) ? p.parameters : (Array.isArray(p.params) ? p.params : [])
-            };
-            if (!profiles.find(x => x.name === normalized.name)) {
-              profiles.push(normalized);
-              totalAdded++;
-            } else {
-              totalSkipped++;
-            }
-          });
-        } catch (e) {
-          totalErrors++;
+      try {
+        const text = await file.text();
+        const imported = JSON.parse(text);
+        if (!Array.isArray(imported)) {
+          await window.splitify.showMessageBox({ type: 'error', title: 'Import Error', message: 'Invalid file format.', detail: 'Expected a JSON array of profiles.' });
+          this.value = ''; return;
         }
+
+        // Normalize: support both 'params' and 'parameters' key names
+        const normalized = imported.map(p => ({
+          ...p,
+          id: 'p_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
+          parameters: Array.isArray(p.parameters) ? p.parameters : (Array.isArray(p.params) ? p.params : [])
+        }));
+
+        // Skip profiles whose name already exists
+        let added = 0;
+        normalized.forEach(p => {
+          if (!profiles.find(x => x.name === p.name)) {
+            profiles.push(p);
+            added++;
+          }
+        });
+
+        const skipped = normalized.length - added;
+        await window.splitify.showMessageBox({
+          type: 'info',
+          title: 'Import Complete',
+          message: `${added} profile${added !== 1 ? 's' : ''} imported successfully.`,
+          detail: skipped > 0 ? `${skipped} skipped — name already exists.` : ''
+        });
+
+        window.splitify.saveProfiles(profiles);
+        renderProfileList();
+        populateProfileSelect();
+        this.value = '';
+      } catch (e) {
+        await window.splitify.showMessageBox({ type: 'error', title: 'Import Failed', message: 'Failed to read file.', detail: e.message });
+        this.value = '';
       }
-
-      const parts = [];
-      if (totalAdded)   parts.push(`${totalAdded} profile${totalAdded !== 1 ? 's' : ''} imported`);
-      if (totalSkipped) parts.push(`${totalSkipped} skipped — name already exists`);
-      if (totalErrors)  parts.push(`${totalErrors} file${totalErrors !== 1 ? 's' : ''} could not be read`);
-
-      await window.splitify.showMessageBox({
-        type: totalErrors && !totalAdded ? 'error' : 'info',
-        title: 'Import Complete',
-        message: parts[0] || 'Nothing imported.',
-        detail: parts.slice(1).join('\n') || ''
-      });
-
-      window.splitify.saveProfiles(profiles);
-      renderProfileList();
-      populateProfileSelect();
-      this.value = '';
     });
 
     // ═══════════════════════════════════════════
