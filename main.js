@@ -131,14 +131,19 @@ function createWindow() {
     minWidth: 520,
     minHeight: 600,
     resizable: true,
-    frame: true,
+    frame: false,
+    titleBarStyle: 'hidden',
+    titleBarOverlay: {
+      color: '#0d0d0d',
+      symbolColor: '#848484',
+      height: 46,
+    },
     backgroundColor: '#0d0d0d',
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
       nodeIntegration: false
     },
-    titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'default',
     icon: path.join(__dirname, 'assets', 'icon.png')
   });
 

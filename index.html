@@ -1813,8 +1813,8 @@
     <div id="tabs">
       <div class="tab active" data-tab="split">⚡ Split File</div>
       <div class="tab" data-tab="profiles">◈ Profiles</div>
-      <div class="tab" data-tab="settings">⚙ Settings</div>
       <div class="tab" data-tab="history">◷ History</div>
+      <div class="tab" data-tab="settings">⚙ Settings</div>
     </div>
 
     <!-- ════════════ SPLIT TAB ════════════ -->
@@ -1830,6 +1830,7 @@
             <div class="drop-sub">or click to browse · .xlsx · .xls · .csv · multiple files supported</div>
           </div>
           <input type="file" id="file-input" accept=".xlsx,.xls,.csv" multiple style="display:none">
+          <input type="file" id="import-profiles-input" accept=".json" multiple style="display:none">
 
           <!-- Column + Profile -->
           <div class="two-col" id="section-settings" style="display:none">
@@ -1925,7 +1926,11 @@
       <div id="profiles-panel">
         <div class="panel-toolbar">
           <span>Manage Profiles</span>
-          <button class="btn btn-accent" id="new-profile-btn">+ New Profile</button>
+          <div style="display:flex;gap:6px">
+            <button class="btn btn-ghost" id="import-profiles-btn">Import ↑</button>
+            <button class="btn btn-ghost" id="export-profiles-btn">Export All ↓</button>
+            <button class="btn btn-accent" id="new-profile-btn">+ New Profile</button>
+          </div>
         </div>
         <div id="profile-list"></div>
       </div>
@@ -2000,31 +2005,6 @@
               </div>
             </div>
           </div>
-        </div>
-
-        <!-- Import / Export Profiles -->
-        <div class="settings-section">
-          <div class="settings-section-title">Profiles — Import / Export</div>
-
-          <div class="settings-row">
-            <div class="settings-row-info">
-              <div class="settings-row-label">Export All Profiles</div>
-              <div class="settings-row-sub">Save all profiles to a .json backup file</div>
-            </div>
-            <div class="settings-row-right"><button class="btn btn-accent" id="export-profiles-btn">Export ↓</button>
-            </div>
-          </div>
-
-          <div class="settings-row">
-            <div class="settings-row-info">
-              <div class="settings-row-label">Import Profiles</div>
-              <div class="settings-row-sub">Load profiles from a .json backup file</div>
-            </div>
-            <div class="settings-row-right">
-              <button class="btn btn-accent" id="import-profiles-btn">Import ↑</button>
-            </div>
-          </div>
-          <input type="file" id="import-profiles-input" accept=".json" style="display:none">
         </div>
 
         <!-- Feedback section -->
