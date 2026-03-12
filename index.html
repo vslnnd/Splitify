@@ -123,10 +123,9 @@
     #update-banner {
       display: none;
       align-items: center;
-      gap: 10px;
-      padding: 8px 16px;
-      background: rgba(184, 242, 160, 0.08);
-      border-bottom: 1px solid rgba(184, 242, 160, 0.2);
+      padding: 10px 16px;
+      background: rgba(184, 242, 160, .08);
+      border-bottom: 1px solid rgba(184, 242, 160, .2);
       flex-shrink: 0;
     }
 
@@ -134,30 +133,105 @@
       display: flex;
     }
 
-    #update-banner .ub-text {
-      flex: 1;
-      font-size: 12px;
-      color: var(--accent);
-      font-weight: 600;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
+    .ub-content {
+      display: flex;
+      align-items: center;
+      width: 100%;
+      gap: 15px;
+    }
+
+    #ub-left {
+      display: flex;
+      flex-direction: column;
       min-width: 0;
+      gap: 4px;
+      flex-shrink: 0;
     }
 
-    #update-banner .ub-progress {
-      height: 3px;
+    #ub-text {
+      font-size: 13px;
+      color: var(--accent);
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    #ub-meta {
+      font-size: 10px;
+      color: var(--text3);
+      font-weight: 400;
+      font-family: var(--mono);
+      white-space: nowrap;
+      display: none;
+    }
+
+    #ub-progress-wrap {
+      flex: 1;
+      min-width: 100px;
+      display: none;
+    }
+
+    #ub-progress {
+      height: 4px;
       background: var(--border);
-      border-radius: 2px;
-      margin-top: 4px;
+      border-radius: 4px;
+      overflow: hidden;
     }
 
-    #update-banner .ub-bar {
+    #ub-bar {
       height: 100%;
       background: var(--accent2);
-      border-radius: 2px;
-      transition: width 0.3s;
+      border-radius: 4px;
+      transition: width .2s ease-out;
       width: 0%;
+    }
+
+    #ub-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+
+    #ub-install {
+      display: none;
+      padding: 6px 14px;
+      font-family: var(--mono);
+      font-size: 11px;
+      font-weight: 700;
+      background: var(--accent);
+      color: var(--bg);
+      border: none;
+      border-radius: var(--radius);
+      cursor: pointer;
+      letter-spacing: .4px;
+      text-transform: uppercase;
+      white-space: nowrap;
+      box-shadow: 0 0 10px rgba(184, 242, 160, .2);
+    }
+
+    #ub-install:hover {
+      background: var(--accent2);
+    }
+
+    #ub-cancel {
+      display: none;
+      align-items: center;
+      justify-content: center;
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      border: 1px solid var(--border2);
+      background: var(--bg3);
+      color: var(--text3);
+      cursor: pointer;
+      font-size: 10px;
+      transition: all var(--tr);
+    }
+
+    #ub-cancel:hover {
+      background: var(--red-dim);
+      color: var(--red);
+      border-color: rgba(255, 92, 92, .3);
     }
 
     /* ── Tabs ── */
@@ -1792,21 +1866,21 @@
 
     <!-- Update Banner -->
     <div id="update-banner">
-      <div style="font-size:14px;flex-shrink:0">↑</div>
-      <div style="flex:1;min-width:0">
-        <div class="ub-text" id="ub-text">Update available</div>
-        <div id="ub-progress-wrap" style="display:none">
-          <div class="ub-progress">
-            <div class="ub-bar" id="ub-bar"></div>
-          </div>
-          <div id="ub-progress-meta" style="display:flex;justify-content:space-between;margin-top:3px;font-size:10px;color:var(--text3);font-weight:500">
-            <span id="ub-meta-size"></span>
-            <span id="ub-meta-speed"></span>
-            <span id="ub-meta-eta"></span>
+      <div class="ub-content">
+        <div id="ub-left">
+          <span id="ub-text">Checking for updates…</span>
+          <span id="ub-meta"></span>
+        </div>
+        <div id="ub-progress-wrap">
+          <div id="ub-progress">
+            <div id="ub-bar"></div>
           </div>
         </div>
+        <div id="ub-actions">
+          <button id="ub-cancel" title="Cancel Download">✕</button>
+          <button id="ub-install" onclick="window.splitify.installUpdate()">↻ Restart &amp; Install</button>
+        </div>
       </div>
-      <button class="btn btn-accent" id="ub-btn" style="display:none">Restart & Install</button>
     </div>
 
     <!-- Tabs -->
@@ -2915,10 +2989,51 @@
         console.log('[updater] checking for updates...');
       });
 
-      window.splitify.onUpdateAvailable(version => {
-        console.log('[updater] update available:', version);
-        document.getElementById('ub-text').textContent = `v${version} available — downloading...`;
-        document.getElementById('update-banner').classList.add('visible');
+      let updateDownloaded = false;
+
+      function fmtBytes(b) {
+        if (b > 1048576) return (b / 1048576).toFixed(1) + ' MB';
+        if (b > 1024) return (b / 1024).toFixed(0) + ' KB';
+        return b + ' B';
+      }
+      function fmtSpeed(bps) { return fmtBytes(bps) + '/s'; }
+      function fmtEta(sec) {
+        if (!isFinite(sec) || sec < 0) return '—';
+        if (sec < 60) return `${Math.round(sec)}s`;
+        return `${Math.floor(sec / 60)}m ${Math.round(sec % 60)}s`;
+      }
+
+      window.splitify.onUpdateAvailable(async info => {
+        console.log('[updater] update available:', info.version);
+
+        if (updateDownloaded) {
+          document.getElementById('update-banner').classList.add('visible');
+          document.getElementById('ub-text').textContent = `Update v${info.version} ready to install`;
+          document.getElementById('ub-progress-wrap').style.display = 'none';
+          document.getElementById('ub-cancel').style.display = 'none';
+          document.getElementById('ub-install').style.display = 'flex';
+          return;
+        }
+
+        const ans = await showModal(
+          `Update v${info.version} Available`,
+          `A new version of Splitify is available. Would you like to download and install it now?`,
+          [
+            { label: 'Yes, Download', cls: 'btn-accent', value: 'yes' },
+            { label: 'Not Now', cls: '', value: 'no' },
+          ]
+        );
+
+        if (ans === 'yes') {
+          document.getElementById('update-banner').classList.add('visible');
+          document.getElementById('ub-progress-wrap').style.display = 'block';
+          document.getElementById('ub-cancel').style.display = 'flex';
+          document.getElementById('ub-install').style.display = 'none';
+          document.getElementById('ub-text').textContent = `Downloading v${info.version}…`;
+          await window.splitify.approveDownload();
+        } else {
+          console.log(`[updater] update v${info.version} skipped by user`);
+        }
       });
 
       window.splitify.onUpdateNotAvailable && window.splitify.onUpdateNotAvailable(version => {
@@ -2926,48 +3041,55 @@
       });
 
       window.splitify.onUpdateProgress(progress => {
-        const pct = typeof progress === 'object' ? progress.percent : progress;
-        document.getElementById('ub-text').textContent = `Downloading update... ${pct}%`;
-        document.getElementById('ub-progress-wrap').style.display = '';
-        document.getElementById('ub-bar').style.width = pct + '%';
-        if (typeof progress === 'object') {
-          const fmt = n => n >= 1073741824 ? (n/1073741824).toFixed(1)+' GB'
-                        : n >= 1048576    ? (n/1048576).toFixed(1)+' MB'
-                        : n >= 1024       ? (n/1024).toFixed(0)+' KB'
-                        :                   n+' B';
-          const spd = n => n >= 1048576 ? (n/1048576).toFixed(1)+' MB/s'
-                         : n >= 1024    ? (n/1024).toFixed(0)+' KB/s'
-                         :                n+' B/s';
-          const eta = progress.bytesPerSecond > 0
-            ? (() => { const s = Math.round((progress.total - progress.transferred) / progress.bytesPerSecond);
-                       return s >= 60 ? Math.floor(s/60)+'m '+( s%60)+'s' : s+'s'; })()
-            : '—';
-          document.getElementById('ub-meta-size').textContent  = fmt(progress.transferred) + ' / ' + fmt(progress.total);
-          document.getElementById('ub-meta-speed').textContent = spd(progress.bytesPerSecond);
-          document.getElementById('ub-meta-eta').textContent   = 'ETA ' + eta;
+        document.getElementById('update-banner').classList.add('visible');
+        document.getElementById('ub-progress-wrap').style.display = 'block';
+        document.getElementById('ub-cancel').style.display = 'flex';
+        document.getElementById('ub-install').style.display = 'none';
+
+        const bar = document.getElementById('ub-bar');
+        const currentW = parseFloat(bar.style.width) || 0;
+        if (progress.percent > currentW) bar.style.width = `${Math.round(progress.percent)}%`;
+
+        document.getElementById('ub-text').textContent = `Downloading update… ${Math.round(progress.percent)}%`;
+
+        const meta = document.getElementById('ub-meta');
+        if (progress.total && progress.bytesPerSecond) {
+          const remaining = (progress.total - progress.transferred) / progress.bytesPerSecond;
+          meta.textContent = `${fmtBytes(progress.transferred)} / ${fmtBytes(progress.total)}  ·  ${fmtSpeed(progress.bytesPerSecond)}  ·  ETA: ${fmtEta(remaining)}`;
+          meta.style.display = 'block';
         }
       });
 
-      window.splitify.onUpdateDownloaded(() => {
-        document.getElementById('ub-text').textContent = 'Update ready — restart to install';
+      window.splitify.onUpdateDownloaded(info => {
+        updateDownloaded = true;
+        document.getElementById('update-banner').classList.add('visible');
+        document.getElementById('ub-text').textContent = `Update v${info.version} ready to install`;
+        document.getElementById('ub-meta').style.display = 'none';
+        document.getElementById('ub-bar').style.width = '100%';
         document.getElementById('ub-progress-wrap').style.display = 'none';
-        document.getElementById('ub-btn').style.display = '';
+        document.getElementById('ub-cancel').style.display = 'none';
+        document.getElementById('ub-install').style.display = 'flex';
       });
 
       window.splitify.onUpdateError && window.splitify.onUpdateError(msg => {
         console.error('[updater] error:', msg);
-        const shortMsg = String(msg).split('\n')[0];
-        const textEl = document.getElementById('ub-text');
-        textEl.textContent = `Update check failed: ${shortMsg}`;
-        textEl.title = String(msg);
-        document.getElementById('update-banner').classList.add('visible');
-        document.getElementById('update-banner').style.background = 'rgba(255,92,92,0.08)';
-        document.getElementById('update-banner').style.borderBottomColor = 'rgba(255,92,92,0.2)';
-        textEl.style.color = 'var(--red)';
       });
 
-      const ubBtn = document.getElementById('ub-btn');
-      if (ubBtn) ubBtn.addEventListener('click', () => window.splitify.installUpdate());
+      const ubCancel = document.getElementById('ub-cancel');
+      if (ubCancel) {
+        ubCancel.addEventListener('click', async () => {
+          const ans = await showModal('Cancel Download', 'Are you sure you want to stop downloading the update?', [
+            { label: 'Stop Download', cls: 'btn-danger', value: 'yes' },
+            { label: 'Keep Downloading', cls: '', value: 'no' },
+          ]);
+          if (ans === 'yes') {
+            const ok = await window.splitify.cancelDownload();
+            if (ok) {
+              document.getElementById('update-banner').classList.remove('visible');
+            }
+          }
+        });
+      }
     }
 
     // ═══════════════════════════════════════════

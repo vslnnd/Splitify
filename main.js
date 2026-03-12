@@ -1,5 +1,5 @@
 const { app, BrowserWindow, ipcMain, dialog, shell } = require('electron');
-const { autoUpdater } = require('electron-updater');
+const { autoUpdater, CancellationToken } = require('electron-updater');
 const path = require('path');
 const fs = require('fs');
 const https = require('https');
@@ -179,10 +179,12 @@ app.whenReady().then(() => {
   createWindow();
 
   // ── Auto-updater setup ────────────────────────────────────────────────────
-  autoUpdater.autoDownload = true;
+  autoUpdater.autoDownload = false;
   autoUpdater.autoInstallOnAppQuit = true;
   autoUpdater.logger = require('electron-log');
   autoUpdater.logger.transports.file.level = 'info';
+
+  let downloadCancellationToken = null;
 
   const settings = loadSettings();
 
@@ -218,7 +220,7 @@ app.whenReady().then(() => {
   });
 
   autoUpdater.on('update-available', (info) => {
-    if (mainWindow) mainWindow.webContents.send('update-available', info.version);
+    if (mainWindow) mainWindow.webContents.send('update-available', info);
   });
 
   autoUpdater.on('update-not-available', (info) => {
@@ -234,8 +236,8 @@ app.whenReady().then(() => {
     });
   });
 
-  autoUpdater.on('update-downloaded', () => {
-    if (mainWindow) mainWindow.webContents.send('update-downloaded');
+  autoUpdater.on('update-downloaded', (info) => {
+    if (mainWindow) mainWindow.webContents.send('update-downloaded', info);
   });
 
   autoUpdater.on('error', (err) => {
@@ -534,6 +536,22 @@ ipcMain.handle('open-file', (_, filePath) => {
   if (typeof filePath === 'string' && path.isAbsolute(filePath)) {
     shell.openPath(filePath);
   }
+});
+
+ipcMain.handle('approve-download', () => {
+  downloadCancellationToken = new CancellationToken();
+  autoUpdater.downloadUpdate(downloadCancellationToken).catch(err => {
+    if (mainWindow) mainWindow.webContents.send('update-error', err.message);
+  });
+});
+
+ipcMain.handle('cancel-download', () => {
+  if (downloadCancellationToken) {
+    downloadCancellationToken.cancel();
+    downloadCancellationToken = null;
+    return true;
+  }
+  return false;
 });
 
 ipcMain.handle('install-update', () => {
