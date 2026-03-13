@@ -183,6 +183,8 @@ function createWindow() {
   });
 }
 
+let downloadCancellationToken = null;
+
 app.whenReady().then(() => {
   createWindow();
 
@@ -192,7 +194,6 @@ app.whenReady().then(() => {
   autoUpdater.logger = require('electron-log');
   autoUpdater.logger.transports.file.level = 'info';
 
-  let downloadCancellationToken = null;
 
   const settings = loadSettings();
 
