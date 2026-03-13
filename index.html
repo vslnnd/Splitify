@@ -266,6 +266,15 @@
       border-bottom-color: var(--accent);
     }
 
+    .tab-icon {
+      margin-right: 6px;
+      font-size: 14px;
+      line-height: 1;
+      vertical-align: middle;
+      position: relative;
+      top: -1px;
+    }
+
     /* ── Tab Panels ── */
     .tab-panel {
       display: none;
@@ -1475,53 +1484,69 @@
       background: var(--accent2);
     }
 
-    /* Theme switcher */
-    .theme-switcher {
+    /* ── Theme Pill Toggle ── */
+    .theme-pill { display: flex; align-items: center; }
+    .theme-pill-track {
+      position: relative;
       display: flex;
-      gap: 4px;
-    }
-
-    .theme-btn {
-      padding: 6px 14px;
-      font-family: var(--mono);
-      font-size: 11px;
-      font-weight: 700;
-      cursor: pointer;
-      border-radius: var(--radius);
+      background: var(--bg4);
       border: 1px solid var(--border2);
-      background: var(--bg3);
+      border-radius: 20px;
+      padding: 3px;
+    }
+    .theme-pill-opt {
+      position: relative;
+      z-index: 1;
+      padding: 3px 14px;
+      font-family: var(--mono);
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: .5px;
+      text-transform: uppercase;
+      border: none;
+      background: transparent;
       color: var(--text3);
-      transition: all var(--tr);
+      cursor: pointer;
+      border-radius: 16px;
+      transition: color .25s ease;
       white-space: nowrap;
     }
-
-    .theme-btn.active {
-      background: var(--accent-dim);
-      color: var(--accent);
-      border-color: rgba(184, 242, 160, 0.3);
+    .theme-pill-opt.active { color: var(--text); }
+    .theme-pill-thumb {
+      position: absolute;
+      top: 3px;
+      bottom: 3px;
+      left: 3px;
+      width: calc(50% - 3px);
+      background: var(--bg);
+      border: 1px solid var(--border2);
+      border-radius: 16px;
+      transition: transform .25s ease;
+      pointer-events: none;
     }
-
-    .theme-btn:hover:not(.active) {
-      background: var(--bg4);
-      color: var(--text2);
+    .theme-pill-track[data-active="light"] .theme-pill-thumb {
+      transform: translateX(100%);
     }
 
     /* ── Light theme overrides ── */
-    body.light {
-      --bg: #f5f5f5;
-      --bg2: #ffffff;
-      --bg3: #eeeeee;
-      --bg4: #e4e4e4;
-      --border: #d0d0d0;
-      --border2: #bbbbbb;
-      --text: #1a1a1a;
-      --text2: #444444;
-      --text3: #888888;
-      --accent-dim: rgba(60, 160, 40, 0.12);
-      --accent-dim2: rgba(60, 160, 40, 0.06);
-      --accent: #2d8a1e;
-      --accent2: #1e6e12;
-      --red-dim: rgba(200, 40, 40, 0.1);
+    [data-theme="light"] {
+      --bg: #f3f2ee;
+      --bg2: #eceae4;
+      --bg3: #e5e3dc;
+      --bg4: #dddbd3;
+      --border: #cbc8be;
+      --border2: #b6b3a8;
+      --accent: #1f7808;
+      --accent2: #165c04;
+      --accent-dim: rgba(31, 120, 8, .1);
+      --accent-dim2: rgba(31, 120, 8, .05);
+      --red: #be1f1f;
+      --red-dim: rgba(190, 31, 31, .1);
+      --yellow: #8a6000;
+      --yellow-dim: rgba(138, 96, 0, .1);
+      --text: #1a1a17;
+      --text2: #3a3a37;
+      --text3: #676560;
     }
 
     /* ── History Tab ── */
@@ -1837,6 +1862,7 @@
     #patchnotes-meta { font-family: var(--sans); font-size: 10px; color: var(--text3); }
 
     </style>
+  <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css">
 </head>
 
 <body>
@@ -1885,10 +1911,10 @@
 
     <!-- Tabs -->
     <div id="tabs">
-      <div class="tab active" data-tab="split">⚡ Split File</div>
-      <div class="tab" data-tab="profiles">◈ Profiles</div>
-      <div class="tab" data-tab="history">◷ History</div>
-      <div class="tab" data-tab="settings">⚙ Settings</div>
+      <div class="tab active" data-tab="split"><i class="ph ph-scissors tab-icon"></i>Split File</div>
+      <div class="tab" data-tab="profiles"><i class="ph ph-bookmarks tab-icon"></i>Profiles</div>
+      <div class="tab" data-tab="history"><i class="ph ph-clock-counter-clockwise tab-icon"></i>History</div>
+      <div class="tab" data-tab="settings"><i class="ph ph-gear-six tab-icon"></i>Settings</div>
     </div>
 
     <!-- ════════════ SPLIT TAB ════════════ -->
@@ -2073,9 +2099,12 @@
               <div class="settings-row-sub">Switch between dark and light mode</div>
             </div>
             <div class="settings-row-right">
-              <div class="theme-switcher">
-                <button class="theme-btn active" id="theme-dark" data-theme="dark">◑ Dark</button>
-                <button class="theme-btn" id="theme-light" data-theme="light">○ Light</button>
+              <div class="theme-pill">
+                <div class="theme-pill-track" id="theme-pill-track" data-active="dark">
+                  <button class="theme-pill-opt active" data-theme-val="dark">Dark</button>
+                  <button class="theme-pill-opt" data-theme-val="light">Light</button>
+                  <div class="theme-pill-thumb"></div>
+                </div>
               </div>
             </div>
           </div>
@@ -3121,10 +3150,7 @@
       document.getElementById('setting-startup-check').checked = appSettings.checkUpdatesOnStartup !== false;
       document.getElementById('setting-interval').value = appSettings.updateIntervalHours || 4;
 
-      // Set theme buttons
-      document.querySelectorAll('.theme-btn').forEach(btn => {
-        btn.classList.toggle('active', btn.dataset.theme === appSettings.theme);
-      });
+      // Theme pill synced via applyTheme above
 
       // Populate favorite profile select
     }
@@ -3135,18 +3161,35 @@
       await window.splitify.saveSettings(appSettings);
     }
 
+    const TITLEBAR_DARK  = { color: '#0d0d0d', symbolColor: '#848484', height: 36 };
+    const TITLEBAR_LIGHT = { color: '#f3f2ee', symbolColor: '#676560', height: 36 };
+
     function applyTheme(theme) {
-      document.body.classList.toggle('light', theme === 'light');
+      const html = document.documentElement;
+      if (theme === 'light') {
+        html.setAttribute('data-theme', 'light');
+      } else {
+        html.removeAttribute('data-theme');
+      }
+      const track = document.getElementById('theme-pill-track');
+      if (track) {
+        track.dataset.active = theme;
+        track.querySelectorAll('.theme-pill-opt').forEach(btn => {
+          btn.classList.toggle('active', btn.dataset.themeVal === theme);
+        });
+      }
+      const overlay = theme === 'light' ? TITLEBAR_LIGHT : TITLEBAR_DARK;
+      if (window.splitify && window.splitify.setTitleBarOverlay) {
+        window.splitify.setTitleBarOverlay(overlay);
+      }
     }
 
-    // Theme buttons
-    document.querySelectorAll('.theme-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        appSettings.theme = btn.dataset.theme;
-        applyTheme(appSettings.theme);
-        document.querySelectorAll('.theme-btn').forEach(b => b.classList.toggle('active', b.dataset.theme === appSettings.theme));
-        saveAppSettings();
-      });
+    // Theme pill — click anywhere on track to toggle
+    document.getElementById('theme-pill-track').addEventListener('click', () => {
+      const track = document.getElementById('theme-pill-track');
+      appSettings.theme = track.dataset.active === 'dark' ? 'light' : 'dark';
+      applyTheme(appSettings.theme);
+      saveAppSettings();
     });
 
     // Startup check toggle
