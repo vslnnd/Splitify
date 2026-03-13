@@ -153,11 +153,19 @@ function createWindow() {
     const currentVersion = app.getVersion();
     mainWindow.webContents.send('app-version', currentVersion);
 
-    // Check if this is the first launch after an update
+    // Check if this is the first launch after a genuine upgrade
     const s = loadSettings();
-    if (s.lastSeenVersion && s.lastSeenVersion !== currentVersion) {
+    const semverGt = (a, b) => {
+      const pa = a.split('.').map(Number);
+      const pb = b.split('.').map(Number);
+      for (let i = 0; i < 3; i++) {
+        if (pa[i] > pb[i]) return true;
+        if (pa[i] < pb[i]) return false;
+      }
+      return false;
+    };
+    if (s.lastSeenVersion && semverGt(currentVersion, s.lastSeenVersion)) {
       const prevVersion = s.lastSeenVersion;
-      // Fetch patch notes from GitHub release, then show modal
       fetchReleaseNotes(currentVersion, (notes) => {
         setTimeout(() => {
           if (mainWindow) mainWindow.webContents.send('first-launch-after-update', {
@@ -189,9 +197,18 @@ app.whenReady().then(() => {
   const settings = loadSettings();
 
   function checkForUpdates() {
-    autoUpdater.checkForUpdates().catch(err => {
-      if (mainWindow) mainWindow.webContents.send('update-error', err.message);
-    });
+    // Safety timeout: if no update event fires within 15s, surface an error
+    // This prevents the UI from freezing forever on network hangs or silent failures
+    const timeout = setTimeout(() => {
+      if (mainWindow) mainWindow.webContents.send('update-error', 'Update check timed out. Check your internet connection.');
+    }, 15000);
+
+    autoUpdater.checkForUpdates()
+      .then(() => clearTimeout(timeout))
+      .catch(err => {
+        clearTimeout(timeout);
+        if (mainWindow) mainWindow.webContents.send('update-error', err.message);
+      });
   }
 
   // Startup check
@@ -556,6 +573,12 @@ ipcMain.handle('cancel-download', () => {
 
 ipcMain.handle('install-update', () => {
   autoUpdater.quitAndInstall();
+});
+
+ipcMain.handle('set-titlebar-overlay', (_, opts) => {
+  if (mainWindow && typeof opts === 'object') {
+    try { mainWindow.setTitleBarOverlay(opts); } catch (_) {}
+  }
 });
 
 ipcMain.handle('get-settings', () => loadSettings());

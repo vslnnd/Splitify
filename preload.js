@@ -36,6 +36,9 @@ contextBridge.exposeInMainWorld('splitify', {
   addHistoryEntry: (entry) => ipcRenderer.invoke('add-history-entry', entry),
   clearHistory: () => ipcRenderer.invoke('clear-history'),
 
+  // Titlebar overlay
+  setTitleBarOverlay: (opts) => ipcRenderer.invoke('set-titlebar-overlay', opts),
+
   // Patch notes
   onFirstLaunchAfterUpdate: (cb) => ipcRenderer.on('first-launch-after-update', (_, data) => cb(data)),
   fetchReleaseNotes: (version) => ipcRenderer.invoke('fetch-release-notes', version),
