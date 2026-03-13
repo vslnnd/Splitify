@@ -3016,6 +3016,10 @@
     if (window.splitify && window.splitify.onUpdateAvailable) {
       window.splitify.onUpdateChecking && window.splitify.onUpdateChecking(() => {
         console.log('[updater] checking for updates...');
+        const el = document.getElementById('update-status-label');
+        const row = document.getElementById('update-status-row');
+        if (el) { el.textContent = 'Checking for updates...'; el.style.color = 'var(--text3)'; }
+        if (row) row.style.display = '';
       });
 
       let updateDownloaded = false;
@@ -3034,6 +3038,7 @@
 
       window.splitify.onUpdateAvailable(async info => {
         console.log('[updater] update available:', info.version);
+        if (window._checkBtnReset_avail) window._checkBtnReset_avail();
 
         if (updateDownloaded) {
           document.getElementById('update-banner').classList.add('visible');
@@ -3067,6 +3072,11 @@
 
       window.splitify.onUpdateNotAvailable && window.splitify.onUpdateNotAvailable(version => {
         console.log('[updater] up to date, current:', version);
+        const el = document.getElementById('update-status-label');
+        const row = document.getElementById('update-status-row');
+        if (el) { el.textContent = '✓ You are on the latest version'; el.style.color = 'var(--accent2)'; }
+        if (row) row.style.display = '';
+        if (window._checkBtnReset_notAvail) window._checkBtnReset_notAvail();
       });
 
       window.splitify.onUpdateProgress(progress => {
@@ -3102,6 +3112,11 @@
 
       window.splitify.onUpdateError && window.splitify.onUpdateError(msg => {
         console.error('[updater] error:', msg);
+        const el = document.getElementById('update-status-label');
+        const row = document.getElementById('update-status-row');
+        if (el) { el.textContent = '⚠ Update check failed: ' + msg; el.style.color = 'var(--red)'; }
+        if (row) row.style.display = '';
+        if (window._checkBtnReset_error) window._checkBtnReset_error();
       });
 
       const ubCancel = document.getElementById('ub-cancel');
@@ -3251,32 +3266,7 @@
       window.splitify.openExternal('https://github.com/vslnnd/Splitify');
     });
 
-    // Update status in settings panel
-    if (window.splitify && window.splitify.onUpdateChecking) {
-      window.splitify.onUpdateChecking(() => {
-        const el = document.getElementById('update-status-label');
-        const row = document.getElementById('update-status-row');
-        if (el) { el.textContent = 'Checking for updates...'; el.style.color = 'var(--text3)'; row.style.display = ''; }
-      });
-    }
-    if (window.splitify && window.splitify.onUpdateNotAvailable) {
-      window.splitify.onUpdateNotAvailable(() => {
-        const el = document.getElementById('update-status-label');
-        const row = document.getElementById('update-status-row');
-        if (el) { el.textContent = '✓ You are on the latest version'; el.style.color = 'var(--accent2)'; row.style.display = ''; }
-        if (window._checkBtnReset_notAvail) window._checkBtnReset_notAvail();
-      });
-    }
-    if (window.splitify && window.splitify.onUpdateAvailable) {
-      window.splitify.onUpdateAvailable(() => {
-        if (window._checkBtnReset_avail) window._checkBtnReset_avail();
-      });
-    }
-    if (window.splitify && window.splitify.onUpdateError) {
-      window.splitify.onUpdateError(() => {
-        if (window._checkBtnReset_error) window._checkBtnReset_error();
-      });
-    }
+    // Update status label handlers — wired once above in the banner block
 
     // Show settings version label
     if (window.splitify && window.splitify.onAppVersion) {
