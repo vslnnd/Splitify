@@ -15,11 +15,9 @@ contextBridge.exposeInMainWorld('splitify', {
 
   // Auto-updater
   installUpdate: () => ipcRenderer.invoke('install-update'),
-  approveDownload: () => ipcRenderer.invoke('approve-download'),
-  cancelDownload: () => ipcRenderer.invoke('cancel-download'),
-  onUpdateAvailable: (cb) => ipcRenderer.on('update-available', (_, info) => cb(info)),
-  onUpdateProgress: (cb) => ipcRenderer.on('update-progress', (_, progress) => cb(progress)),
-  onUpdateDownloaded: (cb) => ipcRenderer.on('update-downloaded', (_, info) => cb(info)),
+  onUpdateAvailable: (cb) => ipcRenderer.on('update-available', (_, version) => cb(version)),
+  onUpdateProgress: (cb) => ipcRenderer.on('update-progress', (_, percent) => cb(percent)),
+  onUpdateDownloaded: (cb) => ipcRenderer.on('update-downloaded', () => cb()),
   onUpdateChecking: (cb) => ipcRenderer.on('update-checking', () => cb()),
   onUpdateNotAvailable: (cb) => ipcRenderer.on('update-not-available', (_, v) => cb(v)),
   onUpdateError: (cb) => ipcRenderer.on('update-error', (_, msg) => cb(msg)),
@@ -35,9 +33,6 @@ contextBridge.exposeInMainWorld('splitify', {
   getHistory: () => ipcRenderer.invoke('get-history'),
   addHistoryEntry: (entry) => ipcRenderer.invoke('add-history-entry', entry),
   clearHistory: () => ipcRenderer.invoke('clear-history'),
-
-  // Titlebar overlay
-  setTitleBarOverlay: (opts) => ipcRenderer.invoke('set-titlebar-overlay', opts),
 
   // Patch notes
   onFirstLaunchAfterUpdate: (cb) => ipcRenderer.on('first-launch-after-update', (_, data) => cb(data)),
