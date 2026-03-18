@@ -17,12 +17,22 @@ Splitify scans your file, finds the condition you set, and splits it into separa
 
 ---
 
+## Screenshots
+
+![Split File](screenshots/split-file.png)
+![Profiles](screenshots/profiles.png)
+![Settings](screenshots/settings.png)
+![File Queue](screenshots/file-queue.png)
+
+---
+
 ## Download
 
 Get the latest version from the [Releases](../../releases/latest) page.
 
 | Platform | File |
 |----------|------|
+| macOS | `.dmg` |
 | Windows | `.exe` installer |
 
 No setup required — download, install, open.
