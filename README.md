@@ -19,9 +19,16 @@ Splitify scans your file, finds the condition you set, and splits it into separa
 
 ## Screenshots
 
+**Drop zone — drag and drop any Excel or CSV file to get started**
 ![Split File](screenshots/split-file.png)
+
+**Profiles — save your split configuration and reuse it in one click**
 ![Profiles](screenshots/profiles.png)
+
+**Settings — manage updates, appearance and send feedback directly**
 ![Settings](screenshots/settings.png)
+
+**File queue — preview exactly which output files will be created before splitting**
 ![File Queue](screenshots/file-queue.png)
 
 ---
