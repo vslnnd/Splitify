@@ -27,7 +27,6 @@ Download the latest release for your platform from the [Releases](../../releases
 
 | Platform | File |
 |----------|------|
-| macOS | `.dmg` |
 | Windows | `.exe` installer |
 
 No setup required — download, install, open.
