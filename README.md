@@ -13,7 +13,7 @@ Splitify scans your file, finds the condition you set, and splits it into separa
 - Split by value, row, or custom condition
 - Profile management — save, load, and switch between configurations
 - Auto-updates — new versions install silently in the background
-- macOS and Windows support
+- Windows support
 
 ---
 
@@ -39,7 +39,6 @@ Get the latest version from the [Releases](../../releases/latest) page.
 
 | Platform | File |
 |----------|------|
-| macOS | `.dmg` |
 | Windows | `.exe` installer |
 
 No setup required — download, install, open.
