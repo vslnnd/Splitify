@@ -1,0 +1,42 @@
+{
+  "name": "splitify",
+  "version": "2.0.2",
+  "description": "Excel file splitter with profile management",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "electron:build": "electron-builder --win --x64 --publish always",
+    "electron:build:local": "electron-builder --win --x64 --publish never",
+    "release": "node release.js"
+  },
+  "build": {
+    "appId": "com.splitify.app",
+    "productName": "Splitify",
+    "publish": {
+      "provider": "github",
+      "owner": "vslnnd",
+      "repo": "Splitify",
+      "releaseType": "release"
+    },
+    "win": {
+      "target": "nsis",
+      "icon": "assets/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "installerIcon": "assets/icon.ico",
+      "uninstallerIcon": "assets/icon.ico"
+    }
+  },
+  "dependencies": {
+    "electron-log": "^5.1.2",
+    "electron-updater": "^6.3.9",
+    "exceljs": "^4.4.0"
+  },
+  "devDependencies": {
+    "electron": "^33.4.11",
+    "electron-builder": "^25.1.8"
+  }
+}

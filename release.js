@@ -1,0 +1,177 @@
+const { execSync, execFileSync } = require('child_process');
+const readline = require('readline');
+const fs = require('fs');
+const path = require('path');
+const https = require('https');
+
+const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+
+const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+
+console.log('\n🚀 Splitify Release Tool');
+console.log('─────────────────────────');
+console.log(`Current version: ${pkg.version}`);
+
+rl.question('New version (e.g. 1.1.0): ', (version) => {
+  version = version.trim();
+
+  if (!version || !/^\d+\.\d+\.\d+$/.test(version)) {
+    console.error('❌ Invalid version format. Use x.y.z (e.g. 1.1.0)');
+    rl.close();
+    process.exit(1);
+  }
+
+  rl.question(`Describe what changed (for commit message): `, (desc) => {
+    desc = desc.trim() || 'update';
+
+    const os = require('os');
+    const tmpFile = path.join(os.tmpdir(), `splitify-notes-v${version}.txt`);
+    const template = [
+      `# Patch notes for v${version} — delete these lines before saving`,
+      `# Prefix each note with +new, +improved, or +fixed`,
+      `#`,
+      `# Examples:`,
+      `#   +new Dark mode added`,
+      `#   +improved Faster file splitting`,
+      `#   +fixed Crash on empty files`,
+      `# ──────────────────────────────────────────────────────────────`,
+      ``
+    ].join('\n');
+
+    fs.writeFileSync(tmpFile, template, 'utf8');
+    console.log('\n📝 Notepad is opening — write your patch notes, save, and close it...');
+
+    try {
+      execSync(`notepad.exe "${tmpFile}"`, { stdio: 'inherit' });
+    } catch(e) { /* Notepad sometimes exits non-zero, safe to ignore */ }
+
+    const raw = fs.existsSync(tmpFile) ? fs.readFileSync(tmpFile, 'utf8') : '';
+    try { fs.unlinkSync(tmpFile); } catch(e) {}
+
+    const notes = raw
+      .split('\n')
+      .filter(l => !l.trim().startsWith('#'))
+      .join('\n')
+      .trim() || desc;
+
+    if (notes === desc) {
+      console.log('⚠  No patch notes entered — using commit message as fallback');
+    } else {
+      console.log('✓  Patch notes captured');
+    }
+
+    rl.close();
+
+    console.log(`\n📦 Releasing v${version} — "${desc}"\n`);
+
+    try {
+      pkg.version = version;
+      fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n');
+      console.log(`✓ Updated package.json to v${version}`);
+
+      execSync('git add .', { stdio: 'inherit' });
+      console.log('✓ git add .');
+
+      execFileSync('git', ['commit', '-m', `v${version} - ${desc}`], { stdio: 'inherit' });
+      console.log(`✓ git commit`);
+
+      execSync('git push', { stdio: 'inherit' });
+      console.log('✓ git push');
+
+      console.log('\n🔨 Building and publishing to GitHub...\n');
+      execSync('npm run electron:build', { stdio: 'inherit' });
+
+      console.log(`\n✅ v${version} released successfully!`);
+
+      cleanupDist(version);
+      uploadPatchNotes(version, notes);
+
+    } catch (err) {
+      console.error('\n❌ Release failed:', err.message);
+      process.exit(1);
+    }
+  });
+});
+
+function cleanupDist(newVersion) {
+  const distDir = path.join(__dirname, 'dist');
+  if (!fs.existsSync(distDir)) return;
+
+  const newExe      = `Splitify Setup ${newVersion}.exe`;
+  const newBlockmap = `Splitify Setup ${newVersion}.exe.blockmap`;
+
+  if (!fs.existsSync(path.join(distDir, newExe))) {
+    console.log('\n⚠  New installer not found in dist/ — skipping cleanup.');
+    return;
+  }
+
+  let deleted = 0;
+  fs.readdirSync(distDir).forEach(file => {
+    const isOldExe      = file.endsWith('.exe')          && file.startsWith('Splitify Setup') && file !== newExe;
+    const isOldBlockmap = file.endsWith('.exe.blockmap') && file.startsWith('Splitify Setup') && file !== newBlockmap;
+
+    if (isOldExe || isOldBlockmap) {
+      try {
+        fs.unlinkSync(path.join(distDir, file));
+        console.log(`🗑  Removed: ${file}`);
+        deleted++;
+      } catch (e) {
+        console.warn(`⚠  Could not remove ${file}: ${e.message}`);
+      }
+    }
+  });
+
+  if (deleted > 0) {
+    console.log(`\n✓ Cleaned up ${deleted} old installer file${deleted !== 1 ? 's' : ''} from dist/`);
+  } else {
+    console.log('\n✓ dist/ already clean — no old installers to remove');
+  }
+}
+
+function uploadPatchNotes(version, notes, attempt = 1) {
+  const MAX_ATTEMPTS = 5;
+  const RETRY_DELAY  = 4000;
+  const token = process.env.GH_TOKEN;
+  if (!token) { console.log('\n⚠  No GH_TOKEN — patch notes not uploaded'); return; }
+
+  if (attempt === 1) console.log('\n📝 Uploading patch notes to GitHub release...');
+
+  githubRequest('GET', `/repos/vslnnd/Splitify/releases/tags/v${version}`, token, null, (err, release) => {
+    if (err || !release || !release.id) {
+      if (attempt < MAX_ATTEMPTS) {
+        console.log(`⏳ Release not visible yet — retrying in 4s... (${attempt}/${MAX_ATTEMPTS})`);
+        setTimeout(() => uploadPatchNotes(version, notes, attempt + 1), RETRY_DELAY);
+      } else {
+        console.log('⚠  Could not find GitHub release after 5 attempts — patch notes skipped');
+      }
+      return;
+    }
+    githubRequest('PATCH', `/repos/vslnnd/Splitify/releases/${release.id}`, token, { body: notes }, (err2) => {
+      if (err2) console.log('⚠  Failed to upload patch notes:', err2.message);
+      else console.log('✓  Patch notes uploaded');
+    });
+  });
+}
+
+function githubRequest(method, endpoint, token, body, cb) {
+  const data = body ? JSON.stringify(body) : null;
+  const req = https.request({
+    hostname: 'api.github.com',
+    path: endpoint,
+    method,
+    headers: {
+      'Authorization': `token ${token}`,
+      'User-Agent': 'Splitify-Release-Tool',
+      'Accept': 'application/vnd.github.v3+json',
+      'Content-Type': 'application/json',
+      ...(data ? { 'Content-Length': Buffer.byteLength(data) } : {})
+    }
+  }, (res) => {
+    let raw = '';
+    res.on('data', chunk => raw += chunk);
+    res.on('end', () => { try { cb(null, JSON.parse(raw)); } catch(e) { cb(null, {}); } });
+  });
+  req.on('error', cb);
+  if (data) req.write(data);
+  req.end();
+}
