@@ -24,31 +24,31 @@ Drop in one or more files, pick the column to split by and a profile that says w
 <table>
   <tr>
     <td width="50%" valign="top">
-      <img src="media/pick-split.webp" alt="Adding two files, choosing a split column and profile, and previewing the output files">
+      <img src="media/pick-split.gif" alt="Adding two files, choosing a split column and profile, and previewing the output files">
       <p><b>Split a file.</b> Drop any Excel or CSV file, choose the profile and the column to split by, and preview exactly which output files will be created, before anything is written.</p>
     </td>
     <td width="50%" valign="top">
-      <img src="media/profiles.webp" alt="The profiles list">
+      <img src="media/profiles.gif" alt="The profiles list">
       <p><b>Profiles.</b> Save a split configuration and reuse it in one click.</p>
     </td>
   </tr>
   <tr>
     <td width="50%" valign="top">
-      <img src="media/new-profile.webp" alt="Creating a new profile and setting its parameters">
+      <img src="media/new-profile.gif" alt="Creating a new profile and setting its parameters">
       <p><b>New profile.</b> Name it, describe it, and set exactly which parameters are included, or import parameters from a similar profile.</p>
     </td>
     <td width="50%" valign="top">
-      <img src="media/history.webp" alt="The history of past splits">
+      <img src="media/history.gif" alt="The history of past splits">
       <p><b>History.</b> Every split, with detailed output for each file.</p>
     </td>
   </tr>
   <tr>
     <td width="50%" valign="top">
-      <img src="media/re-run.webp" alt="Re-running a past split from history">
+      <img src="media/re-run.gif" alt="Re-running a past split from history">
       <p><b>Re-run.</b> Split the same files again straight from history, as long as they are still on the same path.</p>
     </td>
     <td width="50%" valign="top">
-      <img src="media/settings.webp" alt="The settings screen">
+      <img src="media/settings.gif" alt="The settings screen">
       <p><b>Settings.</b> Manage updates and appearance, or send feedback to the developer.</p>
     </td>
   </tr>
